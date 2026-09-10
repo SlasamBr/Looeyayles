@@ -8,9 +8,9 @@ if not success or not Rayfield then
 end
 
 local Window = Rayfield:CreateWindow({
-    Name = "⭐🎈🎪~Looey Circus Gui~🎪🎈⭐",
+    Name = "🎪🎈⭐-Looey Circus Gui-⭐🎈🎪",
     LoadingTitle = "Loading That FUCKASS Gui...",
-    LoadingSubtitle = "Why u looking here son",
+    LoadingSubtitle = "Why u here",
     ConfigurationSaving = { Enabled = false, FolderName = "LooeyCircus", FileName = "Config" },
     KeySystem = false,
 })
@@ -351,9 +351,9 @@ EspTab:CreateButton({ Name = "Item Esp", Callback = function()
         Stopwatch = 11,
         ChristmasCookie = 9,
         DandyEasterEggs = 9,
-        Pumpkins = 10,
-        Baskets = 4,
-        Ornaments = 6
+        Pumpkin = 10,
+        Basket = 4,
+        Ornament = 6
     }
     
     local cols = {
@@ -388,6 +388,54 @@ EspTab:CreateButton({ Name = "Item Esp", Callback = function()
     workspace.DescendantAdded:Connect(function(o) if itemMap[o.Name] then task.defer(function() apply(o) end) end end)
 end})
 
+EspTab:CreateButton({ Name = "Generator Esp", Callback = function()
+    local function applyGen(obj)
+        if not obj or not obj.Parent or obj:FindFirstChild("Gen_ESP_Added") then return end
+        local nameLower = obj.Name:lower()
+        if nameLower == "generator" or nameLower == "generators" then
+            Instance.new("BoolValue", obj).Name = "Gen_ESP_Added"
+            local hi = Instance.new("Highlight", obj)
+            hi.Name = "GenChams"
+            hi.Adornee = obj
+            hi.FillColor = Color3.fromRGB(255, 255, 0)
+            hi.FillTransparency = 0.4
+            hi.OutlineColor = Color3.fromRGB(255, 255, 0)
+            hi.OutlineTransparency = 0
+            
+            local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
+            if part then
+                local bb = Instance.new("BillboardGui", obj)
+                bb.Name = "GenNametag"
+                bb.Adornee = part
+                bb.Size = UDim2.new(0, 200, 0, 50)
+                bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                bb.AlwaysOnTop = true
+                
+                local txt = Instance.new("TextLabel", bb)
+                txt.Size = UDim2.new(1, 0, 1, 0)
+                txt.BackgroundTransparency = 1
+                txt.Text = obj.Name
+                txt.TextColor3 = Color3.fromRGB(255, 255, 0)
+                txt.TextSize = 14
+                txt.Font = Enum.Font.SourceSansBold
+                txt.TextStrokeTransparency = 0
+            end
+        end
+    end
+    
+    task.spawn(function()
+        for _, o in ipairs(workspace:GetDescendants()) do
+            applyGen(o)
+        end
+    end)
+    
+    workspace.DescendantAdded:Connect(function(o)
+        task.defer(function()
+            applyGen(o)
+        end)
+    end)
+end})
+
 -- ==============================================================================
 -- TELEPORT TAB
 -- ==============================================================================
@@ -412,7 +460,7 @@ TeleportTab:CreateButton({ Name = "Teleport generator", Callback = function()
 end })
 
 TeleportTab:CreateSection("Items Teleport")
-local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "Pumpkins", "Baskets", "Ornaments"}
+local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "Pumpkin", "Basket", "Ornament"}
 local selectedItem = itemsList[1]
 TeleportTab:CreateDropdown({ Name = "Teleport itens", Options = itemsList, CurrentOption = {itemsList[1]}, Flag = "SelectedItemTp", Callback = function(opt) selectedItem = type(opt) == "table" and opt[1] or opt end })
 TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = function() teleportTo(selectedItem, true) end })
@@ -421,17 +469,47 @@ TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = functi
 -- SCRIPT TAB
 -- ==============================================================================
 local ScriptTab = Window:CreateTab("Script", "terminal")
-ScriptTab:CreateButton({ Name = "Boxten sex Gui", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Boxten Sex GUI") end) end })
-ScriptTab:CreateButton({ Name = "Glisten strip club", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Glisten's Strip Club") end) end })
-ScriptTab:CreateButton({ Name = "Void Extractor", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/seannstar/voidextractor/refs/heads/main/VoidExtractor.lua"))() end) end })
-ScriptTab:CreateButton({ Name = "Riddance Hub", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/riddance-club/script/refs/heads/main/loader.lua"))() end) end })
+ScriptTab:CreateButton({ Name = "Boxten sex Gui", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Boxten Sex GUI") end) end })
+ScriptTab:CreateButton({ Name = "Glisten strip club", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Glisten's Strip Club") end) end })
+ScriptTab:CreateButton({ Name = "Void Extractor", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/seannstar/voidextractor/refs/heads/main/VoidExtractor.lua"))() end) end })
+ScriptTab:CreateButton({ Name = "Riddance Hub", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/riddance-club/script/refs/heads/main/loader.lua"))() end) end })
 
 -- ==============================================================================
 -- PLAYER TAB
 -- ==============================================================================
 local PlayerTab = Window:CreateTab("Player", "user")
-PlayerTab:CreateButton({ Name = "Inf STAMINA", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))() end) end })
-PlayerTab:CreateButton({ Name = "Ability inf range", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/alihusam078588-web/Twilight-zone-loader/refs/heads/main/abilityrange.lua"))() end) end })
+PlayerTab:CreateButton({ Name = "Infinite Stamina", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))() end) end })
+PlayerTab:CreateButton({ Name = "Ability infinite range", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/alihusam078588-web/Twilight-zone-loader/refs/heads/main/abilityrange.lua"))() end) end })
+
+local autoAbilityEnabled = false
+PlayerTab:CreateToggle({ Name = "Auto Use Ability", CurrentValue = false, Flag = "AutoAbilityToggle", Callback = function(v)
+    autoAbilityEnabled = v
+end })
+
+task.spawn(function()
+    while true do
+        if autoAbilityEnabled then
+            pcall(function()
+                -- Dispara o evento de habilidade ou simula o input sem roubar o foco do movimento/sprint do mobile
+                if vim and vim.SendKeyEvent then
+                    vim:SendKeyEvent(true, Enum.KeyCode.F, false, game)
+                    task.wait(0.02)
+                    vim:SendKeyEvent(false, Enum.KeyCode.F, false, game)
+                elseif keypress and keyrelease then
+                    keypress(0x46) -- CÃ³digo da tecla F
+                    task.wait(0.02)
+                    keyrelease(0x46)
+                else
+                    -- Fallback seguro que nÃ£o trava o analÃ³gico/sprint no mobile
+                    UserInputService.InputBegan:Fire({KeyCode = Enum.KeyCode.F, UserInputType = Enum.UserInputType.Keyboard}, false)
+                    task.wait(0.02)
+                    UserInputService.InputEnded:Fire({KeyCode = Enum.KeyCode.F, UserInputType = Enum.UserInputType.Keyboard}, false)
+                end
+            end)
+        end
+        task.wait(1)
+    end
+end)
 
 -- ==============================================================================
 -- MACHINE TAB
