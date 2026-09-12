@@ -351,9 +351,9 @@ EspTab:CreateButton({ Name = "Item Esp", Callback = function()
         Stopwatch = 11,
         ChristmasCookie = 9,
         DandyEasterEggs = 9,
-        Pumpkin = 10,
-        Basket = 4,
-        Ornament = 6
+        HolidayCollectibleItem = 10,
+        HolidayCollectibleItem = 4,
+        HolidayCollectibleItem = 6
     }
     
     local cols = {
