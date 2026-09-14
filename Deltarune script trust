@@ -389,29 +389,34 @@ EspTab:CreateButton({ Name = "Item Esp", Callback = function()
 end})
 
 EspTab:CreateButton({ Name = "Generator Esp", Callback = function()
+    local processedGenerators = {}
+
     local function applyGen(obj)
-        if not obj or not obj.Parent or obj:FindFirstChild("Gen_ESP_Added") then return end
+        if not obj or not obj.Parent or processedGenerators[obj] then return end
+        
         local nameLower = obj.Name:lower()
         if nameLower == "generator" or nameLower == "generators" then
-            Instance.new("BoolValue", obj).Name = "Gen_ESP_Added"
-            local hi = Instance.new("Highlight", obj)
+            processedGenerators[obj] = true
+
+            local hi = Instance.new("Highlight")
             hi.Name = "GenChams"
             hi.Adornee = obj
             hi.FillColor = Color3.fromRGB(255, 255, 0)
             hi.FillTransparency = 0.4
             hi.OutlineColor = Color3.fromRGB(255, 255, 0)
             hi.OutlineTransparency = 0
-            
+            hi.Parent = obj
+
             local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
             if part then
-                local bb = Instance.new("BillboardGui", obj)
+                local bb = Instance.new("BillboardGui")
                 bb.Name = "GenNametag"
                 bb.Adornee = part
                 bb.Size = UDim2.new(0, 200, 0, 50)
                 bb.StudsOffset = Vector3.new(0, 2.5, 0)
                 bb.AlwaysOnTop = true
                 
-                local txt = Instance.new("TextLabel", bb)
+                local txt = Instance.new("TextLabel")
                 txt.Size = UDim2.new(1, 0, 1, 0)
                 txt.BackgroundTransparency = 1
                 txt.Text = obj.Name
@@ -419,16 +424,21 @@ EspTab:CreateButton({ Name = "Generator Esp", Callback = function()
                 txt.TextSize = 14
                 txt.Font = Enum.Font.SourceSansBold
                 txt.TextStrokeTransparency = 0
+                txt.Parent = bb
+                
+                bb.Parent = obj
             end
         end
     end
     
+    -- Varredura inicial em segundo plano com pausas para evitar travamentos
     task.spawn(function()
         for _, o in ipairs(workspace:GetDescendants()) do
             applyGen(o)
         end
     end)
     
+    -- Escuta novos geradores adicionados ao mapa
     workspace.DescendantAdded:Connect(function(o)
         task.defer(function()
             applyGen(o)
