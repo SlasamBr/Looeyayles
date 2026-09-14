@@ -8,9 +8,9 @@ if not success or not Rayfield then
 end
 
 local Window = Rayfield:CreateWindow({
-    Name = "🎪🎈⭐-Looey Circus Gui-⭐🎈🎪",
+    Name = ":D ~Looey Circus Gui~ : D",
     LoadingTitle = "Loading That FUCKASS Gui...",
-    LoadingSubtitle = "Why u here",
+    LoadingSubtitle = "BOIIIIIIIIIIIIIIIIIIIIIIIIIIIII",
     ConfigurationSaving = { Enabled = false, FolderName = "LooeyCircus", FileName = "Config" },
     KeySystem = false,
 })
@@ -469,17 +469,31 @@ TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = functi
 -- SCRIPT TAB
 -- ==============================================================================
 local ScriptTab = Window:CreateTab("Script", "terminal")
-ScriptTab:CreateButton({ Name = "Boxten sex Gui", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Boxten Sex GUI") end) end })
-ScriptTab:CreateButton({ Name = "Glisten strip club", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Glisten's Strip Club") end) end })
-ScriptTab:CreateButton({ Name = "Void Extractor", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/seannstar/voidextractor/refs/heads/main/VoidExtractor.lua"))() end) end })
-ScriptTab:CreateButton({ Name = "Riddance Hub", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawusercontent.com/riddance-club/script/refs/heads/main/loader.lua"))() end) end })
+
+ScriptTab:CreateButton({ Name = "Noxious Hub", Callback = function() 
+    pcall(function() 
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Boxten Sex GUI") 
+    end) 
+end })
+
+ScriptTab:CreateButton({ Name = "Glisten Strip Club", Callback = function() 
+    pcall(function() 
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))({load = "Glisten's Strip Club", fix = true}) 
+    end) 
+end })
+
+ScriptTab:CreateButton({ Name = "Void Extractor [AUTO FARM]", Callback = function() 
+    pcall(function() 
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/seannstar/voidextractor/refs/heads/main/VoidExtractor.lua"))() 
+    end) 
+end })
 
 -- ==============================================================================
 -- PLAYER TAB
 -- ==============================================================================
 local PlayerTab = Window:CreateTab("Player", "user")
 PlayerTab:CreateButton({ Name = "Infinite Stamina", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))() end) end })
-PlayerTab:CreateButton({ Name = "Ability infinite range", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/alihusam078588-web/Twilight-zone-loader/refs/heads/main/abilityrange.lua"))() end) end })
+PlayerTab:CreateButton({ Name = "Ability Infinite Range", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/alihusam078588-web/Twilight-zone-loader/refs/heads/main/abilityrange.lua"))() end) end })
 
 local autoAbilityEnabled = false
 PlayerTab:CreateToggle({ Name = "Auto Use Ability", CurrentValue = false, Flag = "AutoAbilityToggle", Callback = function(v)
@@ -490,20 +504,13 @@ task.spawn(function()
     while true do
         if autoAbilityEnabled then
             pcall(function()
-                -- Dispara o evento de habilidade ou simula o input sem roubar o foco do movimento/sprint do mobile
-                if vim and vim.SendKeyEvent then
-                    vim:SendKeyEvent(true, Enum.KeyCode.F, false, game)
-                    task.wait(0.02)
-                    vim:SendKeyEvent(false, Enum.KeyCode.F, false, game)
-                elseif keypress and keyrelease then
-                    keypress(0x46) -- CÃ³digo da tecla F
-                    task.wait(0.02)
-                    keyrelease(0x46)
-                else
-                    -- Fallback seguro que nÃ£o trava o analÃ³gico/sprint no mobile
-                    UserInputService.InputBegan:Fire({KeyCode = Enum.KeyCode.F, UserInputType = Enum.UserInputType.Keyboard}, false)
-                    task.wait(0.02)
-                    UserInputService.InputEnded:Fire({KeyCode = Enum.KeyCode.F, UserInputType = Enum.UserInputType.Keyboard}, false)
+                if Character and HumanoidRootPart then
+                    local args = {
+                        [1] = Character,
+                        [2] = HumanoidRootPart.CFrame,
+                        [3] = false
+                    }
+                    ReplicatedStorage.Events.AbilityEvent:InvokeServer(unpack(args))
                 end
             end)
         end
@@ -516,7 +523,7 @@ end)
 -- ==============================================================================
 local MachineTab = Window:CreateTab("Machine", "cpu")
 MachineTab:CreateToggle({ Name = "Instant Skillcheck", CurrentValue = false, Flag = "InstantSkillcheck", Callback = function(v) getgenv().scinstant = v end })
-MachineTab:CreateButton({ Name = "Auto machine Barnaby", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/christmas-cookie/extensions/refs/heads/main/arcademachine", true))() end) end })
+MachineTab:CreateButton({ Name = "Auto Arcade Machine", Callback = function() pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/christmas-cookie/extensions/refs/heads/main/arcademachine", true))() end) end })
 
 task.spawn(function()
     getgenv().scinstant = false
@@ -634,7 +641,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
-FunTab:CreateButton({ Name = "Reset character", Callback = function()
+FunTab:CreateButton({ Name = "Reset Character", Callback = function()
     pcall(function()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
             LocalPlayer.Character.Humanoid.Health = 0
@@ -642,7 +649,7 @@ FunTab:CreateButton({ Name = "Reset character", Callback = function()
     end)
 end })
 
-FunTab:CreateButton({ Name = "YouTube music", Callback = function()
+FunTab:CreateButton({ Name = "YouTube Music", Callback = function()
     pcall(function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-YouTube-Music-Player-V8-236600"))()
     end)
