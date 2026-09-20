@@ -952,12 +952,13 @@ TeleportTab:CreateDropdown({ Name = "Select Your Item", Options = itemsList, Cur
 TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = function() teleportTo(selectedItem, true) end })
 
 -- ==============================================================================
--- PLAYER TAB
+-- PLAYER TAB (COM O NO-SLIPPERY ATUALIZADO)
 -- ==============================================================================
 local PlayerTab = Window:CreateTab("Player", "user")
 
 local noSlipperyEnabled = false
 local defaultPhysicalProperties = {}
+local brakeConnection = nil
 
 PlayerTab:CreateToggle({
     Name = "No Slippery",
@@ -966,15 +967,65 @@ PlayerTab:CreateToggle({
     Callback = function(v)
         noSlipperyEnabled = v
         local char = LocalPlayer.Character
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    if noSlipperyEnabled then
+        
+        if noSlipperyEnabled then
+            -- Configuração de física pesada e fricção máxima
+            local physicalProperties = PhysicalProperties.new(
+                15.0,   -- Densidade ultra alta (peso)
+                3.0,    -- Fricção altíssima para anular o gelo
+                0.0,    -- Elasticidade zero
+                1.0,    -- Fricção do peso
+                1.0     -- Elasticidade do peso
+            )
+            
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
                         if not defaultPhysicalProperties[part] then
                             defaultPhysicalProperties[part] = part.CustomPhysicalProperties
                         end
-                        part.CustomPhysicalProperties = PhysicalProperties.new(3.5, 1.5, 0.1, 1.0, 1.0)
-                    else
+                        part.CustomPhysicalProperties = physicalProperties
+                    end
+                end
+            end
+
+            -- Sistema de freio inercial para parar instantaneamente ao soltar as teclas
+            if not brakeConnection then
+                brakeConnection = RunService.RenderStepped:Connect(function(dt)
+                    if not noSlipperyEnabled then return end
+                    local currentCharacter = LocalPlayer.Character
+                    if not currentCharacter then return end
+                    
+                    local humanoid = currentCharacter:FindFirstChildOfClass("Humanoid")
+                    local rootPart = currentCharacter:FindFirstChild("HumanoidRootPart")
+                    
+                    if humanoid and rootPart and humanoid.Health > 0 then
+                        local velocity = rootPart.AssemblyLinearVelocity
+                        local horizontalVelocity = Vector3.new(velocity.X, 0, velocity.Z)
+                        
+                        if humanoid.MoveDirection.Magnitude == 0 then
+                            if horizontalVelocity.Magnitude > 0.5 then
+                                local brakeFactor = math.clamp(dt * 25, 0, 1)
+                                rootPart.AssemblyLinearVelocity = Vector3.new(
+                                    velocity.X * (1 - brakeFactor),
+                                    velocity.Y,
+                                    velocity.Z * (1 - brakeFactor)
+                                )
+                            end
+                        end
+                    end
+                end)
+            end
+        else
+            -- Desativa o freio e restaura a física padrão
+            if brakeConnection then
+                brakeConnection:Disconnect()
+                brakeConnection = nil
+            end
+            
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
                         if defaultPhysicalProperties[part] then
                             part.CustomPhysicalProperties = defaultPhysicalProperties[part]
                         else
@@ -983,6 +1034,7 @@ PlayerTab:CreateToggle({
                     end
                 end
             end
+            defaultPhysicalProperties = {}
         end
     end
 })
@@ -991,9 +1043,10 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     if noSlipperyEnabled then
         task.delay(1, function()
             if noSlipperyEnabled and char then
+                local physicalProperties = PhysicalProperties.new(15.0, 3.0, 0.0, 1.0, 1.0)
                 for _, part in ipairs(char:GetDescendants()) do
                     if part:IsA("BasePart") then
-                        part.CustomPhysicalProperties = PhysicalProperties.new(3.5, 1.5, 0.1, 1.0, 1.0)
+                        part.CustomPhysicalProperties = physicalProperties
                     end
                 end
             end
