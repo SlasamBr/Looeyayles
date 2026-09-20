@@ -1,3 +1,6 @@
+-- ==============================================================================
+-- 🎈⭐🎪-Looey Circus Gui-🎪⭐🎈
+-- ==============================================================================
 local Rayfield = nil
 local success, err = pcall(function()
     Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
@@ -130,8 +133,8 @@ MainTab:CreateToggle({
     end
 })
 
-MainTab:CreateToggle({ Name = "Enable TPWalk", CurrentValue = false, Flag = "TPWalkToggle", Callback = function(v) tpWalkEnabled = v end })
-MainTab:CreateSlider({ Name = "TPWalk Speed", Range = {0.1, 5}, Increment = 0.1, CurrentValue = 1, Flag = "TPWalkSpeed", Callback = function(v) tpWalkSpeed = v end })
+MainTab:CreateToggle({ Name = "Enable Tpwalk", CurrentValue = false, Flag = "TPWalkToggle", Callback = function(v) tpWalkEnabled = v end })
+MainTab:CreateSlider({ Name = "Tpwalk Speed", Range = {0.1, 5}, Increment = 0.1, CurrentValue = 1, Flag = "TPWalkSpeed", Callback = function(v) tpWalkSpeed = v end })
 
 MainTab:CreateToggle({ Name = "Float", CurrentValue = false, Flag = "FloatToggle", Callback = function(v)
     floatEnabled = v
@@ -164,7 +167,7 @@ MainTab:CreateToggle({ Name = "Float", CurrentValue = false, Flag = "FloatToggle
     end
 end })
 
-MainTab:CreateSlider({ Name = "Float Height (Studs)", Range = {1, 20}, Increment = 0.5, CurrentValue = 3.5, Flag = "FloatHeightSlider", Callback = function(v)
+MainTab:CreateSlider({ Name = "Float Studs", Range = {1, 20}, Increment = 0.5, CurrentValue = 3.5, Flag = "FloatHeightSlider", Callback = function(v)
     floatHeight = v
     if floatEnabled and HumanoidRootPart then
         local rayParams = RaycastParams.new()
@@ -463,7 +466,7 @@ EspTab:CreateToggle({
             if twistedConnection then twistedConnection:Disconnect() end
             twistedConnection = Workspace.DescendantAdded:Connect(function(obj)
                 if twistedEspEnabled and obj:IsA("Model") and AllMonsters[obj.Name] then
-                    task.wait(0.1)
+  task.wait(0.1)
                     setupMonster(obj)
                 end
             end)
@@ -712,7 +715,7 @@ EspTab:CreateToggle({
                 Tape = "Tape",
                 Instructions = "Instructions",
                 ExtractionSpeedCandy = "Extraction Candy",
-                SkillCheckCandy = "Skill Check Candy",
+                SkillCheckCandy = "SkillCheck Candy",
                 StaminaCandy = "Stamina Candy",
                 StealthCandy = "Stealth Candy",
                 SpeedCandy = "Speed Candy",
@@ -736,7 +739,7 @@ EspTab:CreateToggle({
                 ["Protein Bar"] = Color3.fromRGB(0, 100, 0),
                 ["Jawbreaker"] = Color3.fromRGB(148, 0, 211),
                 ["Eject Button"] = Color3.fromRGB(255, 255, 0),
-                ["Health Kit"] = Color3.fromRGB(255, 20, 147),
+                ["MedKit"] = Color3.fromRGB(255, 0, 127), -- Rosa bem forte atualizado aqui
                 ["Bandage"] = Color3.fromRGB(255, 20, 147),
                 ["Tape"] = Color3.fromRGB(128, 128, 128),
                 ["Instructions"] = Color3.fromRGB(148, 0, 211),
@@ -953,6 +956,51 @@ TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = functi
 -- ==============================================================================
 local PlayerTab = Window:CreateTab("Player", "user")
 
+local noSlipperyEnabled = false
+local defaultPhysicalProperties = {}
+
+PlayerTab:CreateToggle({
+    Name = "No Slippery",
+    CurrentValue = false,
+    Flag = "NoSlipperyToggle",
+    Callback = function(v)
+        noSlipperyEnabled = v
+        local char = LocalPlayer.Character
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    if noSlipperyEnabled then
+                        if not defaultPhysicalProperties[part] then
+                            defaultPhysicalProperties[part] = part.CustomPhysicalProperties
+                        end
+                        part.CustomPhysicalProperties = PhysicalProperties.new(3.5, 1.5, 0.1, 1.0, 1.0)
+                    else
+                        if defaultPhysicalProperties[part] then
+                            part.CustomPhysicalProperties = defaultPhysicalProperties[part]
+                        else
+                            part.CustomPhysicalProperties = nil
+                        end
+                    end
+                end
+            end
+        end
+    end
+})
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if noSlipperyEnabled then
+        task.delay(1, function()
+            if noSlipperyEnabled and char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CustomPhysicalProperties = PhysicalProperties.new(3.5, 1.5, 0.1, 1.0, 1.0)
+                    end
+                end
+            end
+        end)
+    end
+end)
+
 local itemAuraEnabled = false
 PlayerTab:CreateToggle({
     Name = "Item Aura",
@@ -1021,7 +1069,7 @@ PlayerTab:CreateButton({
     Name = "Infinite Stamina",
     Callback = function()
         pcall(function()
-            loadstring(game:HttpGet("https://rawusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))()
         end)
     end
 })
@@ -1329,13 +1377,24 @@ task.spawn(function()
     end)
 end)
 
+-- Novo hook integrado para o SkillcheckUpdate
 task.spawn(function()
     getgenv().scinstant = false
     pcall(function()
-        local ev = ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("SkillcheckUpdate")
-        if ev then
-            local og = getcallbackvalue(ev, "OnClientInvoke")
-            if og then hookfunction(og, function(...) if getgenv().scinstant then return "supercomplete" end return og(...) end) end
+        local event = game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("SkillcheckUpdate")
+        local ogcb = getcallbackvalue(event, "OnClientInvoke")
+
+        if ogcb then
+            local hook
+            hook = hookfunction(ogcb, function(...)
+                if getgenv().scinstant then
+                    return "supercomplete"
+                end
+                return hook(...)
+            end)
+            print("Instant Skillcheck ativado!")
+        else
+            warn("Não foi possível encontrar o callback do Skillcheck.")
         end
     end)
 end)
