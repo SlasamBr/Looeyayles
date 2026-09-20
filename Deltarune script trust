@@ -59,28 +59,28 @@ local function teleportTo(name, isExact)
 end
 
 -- ==============================================================================
--- NOCLIP (CONTROLE POR FUNÇÃO)
+-- NOCLIP
 -- ==============================================================================
 local NoclipConnection = nil
-local noclipActive = false
 
 local function toggleNoclip(state)
-    noclipActive = state
-    
-    if noclipActive then
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                pcall(function()
-                    for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanQuery"))) do conn:Disconnect() end
-                    for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanCollide"))) do conn:Disconnect() end
-                    for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanTouch"))) do conn:Disconnect() end
-                    for _, conn in ipairs(getconnections(part.Changed)) do conn:Disconnect() end
-                end)
-                part.CanCollide = false
+    if state then
+        local function applyNoclip()
+            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+            for _, part in ipairs(character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    pcall(function()
+                        for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanQuery"))) do conn:Disconnect() end
+                        for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanCollide"))) do conn:Disconnect() end
+                        for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanTouch"))) do conn:Disconnect() end
+                        for _, conn in ipairs(getconnections(part.Changed)) do conn:Disconnect() end
+                    end)
+                    part.CanCollide = false
+                end
             end
         end
-        
+
+        applyNoclip()
         if not NoclipConnection then
             NoclipConnection = RunService.Stepped:Connect(function()
                 local character = LocalPlayer.Character
@@ -164,7 +164,7 @@ MainTab:CreateToggle({ Name = "Float", CurrentValue = false, Flag = "FloatToggle
     end
 end })
 
-MainTab:CreateSlider({ Name = "Float Studs", Range = {1, 20}, Increment = 0.5, CurrentValue = 3.5, Flag = "FloatHeightSlider", Callback = function(v)
+MainTab:CreateSlider({ Name = "Float Height (Studs)", Range = {1, 20}, Increment = 0.5, CurrentValue = 3.5, Flag = "FloatHeightSlider", Callback = function(v)
     floatHeight = v
     if floatEnabled and HumanoidRootPart then
         local rayParams = RaycastParams.new()
@@ -189,6 +189,70 @@ RunService.RenderStepped:Connect(function(delta)
         pcall(function() HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + (Humanoid.MoveDirection * tpWalkSpeed * delta * 60) end)
     end
 end)
+
+-- ==============================================================================
+-- AUTOMATION TAB
+-- ==============================================================================
+local AutomationTab = Window:CreateTab("Automation", "cpu")
+local autoCollectActive = false
+
+AutomationTab:CreateToggle({
+    Name = "Auto Collect Research Capsules",
+    CurrentValue = false,
+    Flag = "AutoCollectResearchCapsulesToggle",
+    Callback = function(v)
+        autoCollectActive = v
+        if autoCollectActive then
+            task.spawn(function()
+                if not Character or not HumanoidRootPart then return end
+                
+                while autoCollectActive do
+                    local capsules = {}
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj.Name == "ResearchCapsule" then
+                            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            if targetPart and prompt then
+                                table.insert(capsules, {Part = targetPart, Prompt = prompt})
+                            end
+                        end
+                    end
+
+                    if #capsules > 0 then
+                        local originalPosition = HumanoidRootPart.CFrame
+                        local collectedAny = false
+
+                        for _, cap in ipairs(capsules) do
+                            if not autoCollectActive then break end
+                            collectedAny = true
+                            HumanoidRootPart.CFrame = cap.Part.CFrame + Vector3.new(0, 3, 0)
+                            task.wait(0.3)
+                            pcall(function()
+                                fireproximityprompt(cap.Prompt)
+                            end)
+                            task.wait(0.4)
+                        end
+
+                        if collectedAny and HumanoidRootPart then
+                            HumanoidRootPart.CFrame = originalPosition
+                        end
+                    end
+                    
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
+AutomationTab:CreateButton({
+    Name = "Autofarm",
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/seannstar/voidextractor/refs/heads/main/VoidExtractor.lua"))()
+        end)
+    end
+})
 
 -- ==============================================================================
 -- ESP TAB
@@ -293,6 +357,7 @@ EspTab:CreateToggle({
             highlight.Adornee = model
             highlight.FillTransparency = 0.5
             highlight.OutlineTransparency = 0
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
             highlight.Parent = container
 
             local billboard = Instance.new("BillboardGui", head)
@@ -304,7 +369,7 @@ EspTab:CreateToggle({
             local textLabel = Instance.new("TextLabel", billboard)
             textLabel.Size = UDim2.new(1, 0, 1, 0)
             textLabel.BackgroundTransparency = 1
-            textLabel.Font = Enum.Font.GothamBold
+            textLabel.Font = Enum.Font.FredokaOne
             textLabel.TextSize = 12
             textLabel.TextStrokeTransparency = 0
             textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
@@ -340,7 +405,7 @@ EspTab:CreateToggle({
                 local colorIndex = 1
 
                 while twistedEspEnabled and model and highlight and highlight.Parent and head do
-                    local dt = task.wait(0.05)
+                    local dt = task.wait(0.1)
                     alpha = alpha + (dt / transitionTime)
                     
                     if alpha >= 1 then
@@ -348,14 +413,9 @@ EspTab:CreateToggle({
                         colorIndex = colorIndex % #Colors + 1
                     end
 
-                    local distNum = 999
-                    local distance = "0"
                     local rootPart = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     
                     if rootPart then
-                        distNum = (rootPart.Position - head.Position).Magnitude
-                        distance = string.format("%.1f", distNum)
-                        
                         local extraText = ""
                         if model.Name == "RodgerMonster" then
                             extraText = "Fake capsule⚠️\n"
@@ -368,34 +428,26 @@ EspTab:CreateToggle({
 
                         local targetColor = baseTextColor
 
-                        if distNum <= 15 then
-                            textLabel.Text = extraText .. "CAREFUL ⚠️\n" .. displayName .. " [" .. distance .."s]" .. rarityText
-                            textLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-                            highlight.FillColor = Color3.fromRGB(255, 255, 0)
-                            highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
-                        else
-                            textLabel.Text = extraText .. displayName .. " [" .. distance .."s]" .. rarityText
-                            
-                            local pingPongAlpha = math.abs((tick() % 2) - 1)
+                        textLabel.Text = extraText .. displayName .. rarityText
+                        
+                        local pingPongAlpha = math.abs((tick() % 2) - 1)
 
-                            if LethalList[model.Name] then
-                                targetColor = LethalColors[1]:Lerp(LethalColors[2], pingPongAlpha)
-                            elseif EasterEventList[model.Name] then
-                                targetColor = EasterColors[1]:Lerp(EasterColors[2], pingPongAlpha)
-                            elseif HalloweenEventList[model.Name] then
-                                targetColor = HalloweenColors[1]:Lerp(HalloweenColors[2], pingPongAlpha)
-                            elseif XmasEventList[model.Name] then
-                                targetColor = XmasColors[1]:Lerp(XmasColors[2], pingPongAlpha)
-                            elseif ColorChangingList[model.Name] then
-                                local c1 = Colors[colorIndex]
-                                local c2 = Colors[colorIndex % #Colors + 1]
-                                targetColor = c1:Lerp(c2, alpha)
-                            end
-
-                            highlight.FillColor = targetColor
-                            highlight.OutlineColor = targetColor
-                            textLabel.TextColor3 = targetColor
+                        if LethalList[model.Name] then
+                            targetColor = LethalColors[1]:Lerp(LethalColors[2], pingPongAlpha)
+                        elseif EasterEventList[model.Name] then
+                            targetColor = EasterColors[1]:Lerp(EasterColors[2], pingPongAlpha)
+                        elseif HalloweenEventList[model.Name] then
+                            targetColor = HalloweenColors[1]:Lerp(HalloweenColors[2], pingPongAlpha)
+                        elseif XmasEventList[model.Name] then
+                            targetColor = XmasColors[1]:Lerp(XmasColors[2], pingPongAlpha)
+                        elseif ColorChangingList[model.Name] then
+                            local c1 = Colors[colorIndex]
+                            local c2 = Colors[colorIndex % #Colors + 1]
+                            targetColor = c1:Lerp(c2, alpha)
                         end
+
+                        highlight.FillColor = targetColor
+                        textLabel.TextColor3 = targetColor
                     end
                 end
             end)
@@ -437,7 +489,6 @@ EspTab:CreateToggle({
     end
 })
 
--- Player Esp Toggle
 local playerEspEnabled = false
 EspTab:CreateToggle({
     Name = "Player Esp",
@@ -446,10 +497,10 @@ EspTab:CreateToggle({
     Callback = function(v)
         playerEspEnabled = v
         if playerEspEnabled then
-            pcall(function()
+            task.spawn(function()
                 local ESP_SETTINGS = {
                     TextSize = 16,
-                    Font = Drawing.Fonts.Comic or Drawing.Fonts.UI,
+                    Font = Drawing.Fonts.FredokaOne or Drawing.Fonts.Legacy or Drawing.Fonts.UI,
                     Colors = {
                         [3] = Color3.fromRGB(0, 150, 255),
                         [2] = Color3.fromRGB(0, 100, 200),
@@ -466,7 +517,6 @@ EspTab:CreateToggle({
                     if player == LocalPlayer then return end
 
                     local espData = {
-                        Nametag = Drawing.new("Text"),
                         Nametag = Drawing.new("Text"),
                         HealthText = Drawing.new("Text"),
                         Highlight = nil,
@@ -629,11 +679,19 @@ EspTab:CreateToggle({
                     end
                 end)
             end)
+        else
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character then
+                    local customHighlight = player.Character:FindFirstChild("CustomESP_Highlight")
+                    if customHighlight then
+                        customHighlight:Destroy()
+                    end
+                end
+            end
         end
     end
 })
 
--- Item Esp Toggle
 local itemEspEnabled = false
 EspTab:CreateToggle({
     Name = "Item Esp",
@@ -643,32 +701,128 @@ EspTab:CreateToggle({
         itemEspEnabled = v
         if itemEspEnabled then
             local itemMap = {
-                AirHorn = 1, SmokeBomb = 12, ResearchCapsule = 2, ProteinBar = 5, Jawbreaker = 12, EjectButton = 1, HealthKit = 3, Bandage = 3, Tape = 8, Instructions = 12, ExtractionSpeedCandy = 12, SkillCheckCandy = 10, StaminaCandy = 5, StealthCandy = 7, SpeedCandy = 9, Gumball = 7, BonBon = 7, Chocolate = 9, ChocolateBox = 9, Pop = 1, PopBottle = 1, JumperCable = 12, Stopwatch = 11, ChristmasCookie = 9, DandyEasterEggs = 9, HolidayCollectibleItem = 10
+                AirHorn = "Air Horn",
+                SmokeBomb = "Smoke Bomb",
+                ResearchCapsule = "Research Capsule",
+                ProteinBar = "Protein Bar",
+                Jawbreaker = "Jawbreaker",
+                EjectButton = "Eject Button",
+                HealthKit = "MedKit",
+                Bandage = "Bandage",
+                Tape = "Tape",
+                Instructions = "Instructions",
+                ExtractionSpeedCandy = "Extraction Candy",
+                SkillCheckCandy = "Skill Check Candy",
+                StaminaCandy = "Stamina Candy",
+                StealthCandy = "Stealth Candy",
+                SpeedCandy = "Speed Candy",
+                Gumball = "Gumball",
+                BonBon = "BonBon",
+                Chocolate = "Chocolate",
+                ChocolateBox = "Chocolate Box",
+                Pop = "Pop",
+                PopBottle = "Pop Bottle",
+                JumperCable = "Jumper Cable",
+                Stopwatch = "Stopwatch",
+                ChristmasCookie = "Christmas Cookie",
+                DandyEasterEggs = "Dandy Easter Eggs",
+                HolidayCollectibleItem = "Pumpkins"
             }
+
             local cols = {
-                Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 182, 193), Color3.fromRGB(0, 100, 0), Color3.fromRGB(0, 128, 128), Color3.fromRGB(135, 206, 250), Color3.fromRGB(128, 128, 128), Color3.fromRGB(255, 255, 0), Color3.fromRGB(255, 140, 0), Color3.fromRGB(255, 255, 255), Color3.fromRGB(128, 0, 128)
+                ["Air Horn"] = Color3.fromRGB(255, 50, 50),
+                ["Smoke Bomb"] = Color3.fromRGB(135, 206, 250),
+                ["Research Capsule"] = Color3.fromRGB(0, 255, 0),
+                ["Protein Bar"] = Color3.fromRGB(0, 100, 0),
+                ["Jawbreaker"] = Color3.fromRGB(148, 0, 211),
+                ["Eject Button"] = Color3.fromRGB(255, 255, 0),
+                ["Health Kit"] = Color3.fromRGB(255, 20, 147),
+                ["Bandage"] = Color3.fromRGB(255, 20, 147),
+                ["Tape"] = Color3.fromRGB(128, 128, 128),
+                ["Instructions"] = Color3.fromRGB(148, 0, 211),
+                ["Extraction Candy"] = Color3.fromRGB(148, 0, 211),
+                ["Skill Check Candy"] = Color3.fromRGB(255, 140, 0),
+                ["Stamina Candy"] = Color3.fromRGB(0, 100, 0),
+                ["Stealth Candy"] = Color3.fromRGB(135, 206, 250),
+                ["Speed Candy"] = Color3.fromRGB(255, 255, 0),
+                ["Gumball"] = Color3.fromRGB(135, 206, 250),
+                ["Bon Bon"] = Color3.fromRGB(255, 182, 193),
+                ["Chocolate"] = Color3.fromRGB(255, 255, 0),
+                ["Chocolate Box"] = Color3.fromRGB(255, 255, 0),
+                ["Pop"] = Color3.fromRGB(255, 0, 0),
+                ["Pop Bottle"] = Color3.fromRGB(255, 0, 0),
+                ["Jumper Cable"] = Color3.fromRGB(148, 0, 211),
+                ["Stopwatch"] = Color3.fromRGB(255, 255, 255),
+                ["Christmas Cookie"] = Color3.fromRGB(255, 255, 0),
+                ["Dandy Easter Eggs"] = Color3.fromRGB(255, 255, 0),
+                ["Pumpkins"] = Color3.fromRGB(255, 140, 0)
             }
+
             local function apply(obj)
-                if not obj or not obj.Parent or obj:FindFirstChild("ESP_Added") then return end
+                if not obj or not obj.Parent then return end
+                
+                local existingAdded = obj:FindFirstChild("ESP_Added")
+                local existingChams = obj:FindFirstChild("ItemChams")
+                local existingNametag = obj:FindFirstChild("ItemNametag")
+                
+                if existingAdded then existingAdded:Destroy() end
+                if existingChams then existingChams:Destroy() end
+                if existingNametag then existingNametag:Destroy() end
+
                 Instance.new("BoolValue", obj).Name = "ESP_Added"
                 
-                local itemColor = cols[itemMap[obj.Name]] or Color3.fromRGB(255, 165, 0)
+                local formattedName = itemMap[obj.Name]
+                local itemColor = cols[formattedName] or Color3.fromRGB(255, 165, 0)
 
                 local hi = Instance.new("Highlight", obj)
-                hi.Name, hi.Adornee, hi.FillColor, hi.FillTransparency, hi.OutlineColor = "ItemChams", obj, itemColor, 0.5, itemColor
+                hi.Name = "ItemChams"
+                hi.Adornee = obj
+                hi.FillColor = itemColor
+                hi.FillTransparency = 0.5
+                hi.OutlineColor = itemColor
+                hi.OutlineTransparency = 0
 
                 local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
                 if part then
                     local bb = Instance.new("BillboardGui", obj)
-                    bb.Name, bb.Adornee, bb.Size, bb.StudsOffset, bb.AlwaysOnTop = "ItemNametag", part, UDim2.new(0,200,0,50), Vector3.new(0,2.5,0), true
+                    bb.Name = "ItemNametag"
+                    bb.Adornee = part
+                    bb.Size = UDim2.new(0, 200, 0, 50)
+                    bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                    bb.AlwaysOnTop = true
+
                     local txt = Instance.new("TextLabel", bb)
-                    txt.Size, txt.BackgroundTransparency, txt.Text, txt.TextColor3, txt.TextSize, txt.Font, txt.TextStrokeTransparency = UDim2.new(1,0,1,0), 1, obj.Name, itemColor, 14, Enum.Font.SourceSansBold, 0
+                    txt.Size = UDim2.new(1, 0, 1, 0)
+                    txt.BackgroundTransparency = 1
+                    txt.Text = formattedName
+                    txt.TextColor3 = itemColor
+                    txt.TextSize = 12
+                    txt.Font = Enum.Font.FredokaOne
+                    txt.TextStrokeTransparency = 0
+
+                    if obj.Name == "HolidayCollectibleItem" then
+                        task.spawn(function()
+                            local orange = Color3.fromRGB(255, 140, 0)
+                            local purple = Color3.fromRGB(148, 0, 211)
+                            while itemEspEnabled and obj and obj.Parent and hi and txt do
+                                local alpha = math.abs(((tick() / 2) % 2) - 1)
+                                local lerpedColor = orange:Lerp(purple, alpha)
+                                hi.FillColor = lerpedColor
+                                hi.OutlineColor = lerpedColor
+                                txt.TextColor3 = lerpedColor
+                                task.wait(0.1)
+                            end
+                        end)
+                    end
                 end
             end
+
             task.spawn(function()
                 while itemEspEnabled do
                     for _, o in ipairs(workspace:GetDescendants()) do
-                        if itemMap[o.Name] then apply(o) end
+                        if itemMap[o.Name] then 
+                            apply(o) 
+                        end
                     end
                     task.wait(2)
                 end
@@ -686,7 +840,6 @@ EspTab:CreateToggle({
     end
 })
 
--- Generator Esp Toggle (Ignorando VendingMachine, Cooking_ExpressoMachine e DanceMachine)
 local generatorEspEnabled = false
 EspTab:CreateToggle({
     Name = "Generator Esp",
@@ -695,9 +848,19 @@ EspTab:CreateToggle({
     Callback = function(v)
         generatorEspEnabled = v
         if generatorEspEnabled then
+            local ignoredNames = {
+                ["VendingMachine"] = true,
+                ["Cooking_ExpressoMachine"] = true,
+                ["DanceMachine"] = true,
+                ["Gachapon_Arcade_01"] = true,
+                ["Gachapon_Arcade_02"] = true,
+                ["Gachapon_Arcade_03"] = true
+            }
+
             local function applyESP(generator)
-                if generator.Name == "VendingMachine" or generator.Name == "Cooking_ExpressoMachine" or generator.Name == "DanceMachine" then return end
+                if ignoredNames[generator.Name] then return end
                 if generator:FindFirstChild("CustomESP") then return end
+                
                 local folder = Instance.new("Folder")
                 folder.Name = "CustomESP"
                 folder.Parent = generator
@@ -706,23 +869,34 @@ EspTab:CreateToggle({
                 highlight.Name = "Chams"
                 highlight.Adornee = generator
                 highlight.FillColor = Color3.fromRGB(255, 255, 255)
-                highlight.OutlineColor = Color3.fromRGB(200, 200, 200)
-                highlight.FillTransparency = 0.4
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                highlight.FillTransparency = 0.5
                 highlight.OutlineTransparency = 0
                 highlight.Parent = folder
+
+                task.spawn(function()
+                    local white = Color3.fromRGB(255, 255, 255)
+                    local softBlack = Color3.fromRGB(40, 40, 40)
+                    while generatorEspEnabled and generator and generator.Parent and highlight and highlight.Parent do
+                        local alpha = math.abs(((tick() / 2) % 2) - 1)
+                        local lerpedColor = white:Lerp(softBlack, alpha)
+                        highlight.FillColor = lerpedColor
+                        task.wait(0.1)
+                    end
+                end)
             end
 
             task.spawn(function()
                 while generatorEspEnabled do
                     for _, obj in ipairs(workspace:GetDescendants()) do
-                        if obj.Name ~= "VendingMachine" and obj.Name ~= "Cooking_ExpressoMachine" and obj.Name ~= "DanceMachine" then
+                        if not ignoredNames[obj.Name] then
                             local nameLower = obj.Name:lower()
                             if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("machine") then
                                 applyESP(obj)
                             end
                         end
                     end
-                    task.wait(2)
+                    task.wait(3)
                 end
             end)
         else
@@ -738,13 +912,21 @@ EspTab:CreateToggle({
 -- TELEPORT TAB
 -- ==============================================================================
 local TeleportTab = Window:CreateTab("Teleport", "navigation")
-TeleportTab:CreateButton({ Name = "Teleport elevator", Callback = function() teleportTo("elevator", false) end })
+TeleportTab:CreateButton({ Name = "Teleport To Elevator", Callback = function() teleportTo("elevator", false) end })
 
-TeleportTab:CreateButton({ Name = "Teleport generator", Callback = function()
+TeleportTab:CreateButton({ Name = "Teleport To Machine", Callback = function()
     if not Character or not HumanoidRootPart then return end
+    local ignoredNames = {
+        ["VendingMachine"] = true,
+        ["Cooking_ExpressoMachine"] = true,
+        ["DanceMachine"] = true,
+        ["Gachapon_Arcade_01"] = true,
+        ["Gachapon_Arcade_02"] = true,
+        ["Gachapon_Arcade_03"] = true
+    }
     local generators = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj.Name ~= "VendingMachine" and obj.Name ~= "Cooking_ExpressoMachine" and obj.Name ~= "DanceMachine" then
+        if not ignoredNames[obj.Name] then
             local nameLower = obj.Name:lower()
             if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") then
                 local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
@@ -763,31 +945,8 @@ end })
 TeleportTab:CreateSection("Items Teleport")
 local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "HolidayCollectibleItem"}
 local selectedItem = itemsList[1]
-TeleportTab:CreateDropdown({ Name = "Teleport itens", Options = itemsList, CurrentOption = {itemsList[1]}, Flag = "SelectedItemTp", Callback = function(opt) selectedItem = type(opt) == "table" and opt[1] or opt end })
+TeleportTab:CreateDropdown({ Name = "Select Your Item", Options = itemsList, CurrentOption = {itemsList[1]}, Flag = "SelectedItemTp", Callback = function(opt) selectedItem = type(opt) == "table" and opt[1] or opt end })
 TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = function() teleportTo(selectedItem, true) end })
-
--- ==============================================================================
--- SCRIPT TAB
--- ==============================================================================
-local ScriptTab = Window:CreateTab("Script", "terminal")
-
-ScriptTab:CreateButton({ Name = "Noxious Hub", Callback = function() 
-    pcall(function() 
-        loadstring(game:HttpGet("https://rawusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))("Boxten Sex GUI") 
-    end) 
-end })
-
-ScriptTab:CreateButton({ Name = "Glisten Strip Club", Callback = function() 
-    pcall(function() 
-        loadstring(game:HttpGet("https://rawusercontent.com/Team-Noxious/Roblox/refs/heads/main/Loader.lua"))({load = "Glisten's Strip Club", fix = true}) 
-    end) 
-end })
-
-ScriptTab:CreateButton({ Name = "Void Extractor [AUTO FARM]", Callback = function() 
-    pcall(function() 
-        loadstring(game:HttpGet("https://rawusercontent.com/seannstar/voidextractor/refs/heads/main/VoidExtractor.lua"))() 
-    end) 
-end })
 
 -- ==============================================================================
 -- PLAYER TAB
@@ -820,7 +979,7 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait(0.2)
+        task.wait(0.3)
     end
 end)
 
@@ -854,7 +1013,7 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait(0.5)
+        task.wait(0.8)
     end
 end)
 
@@ -862,7 +1021,7 @@ PlayerTab:CreateButton({
     Name = "Infinite Stamina",
     Callback = function()
         pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))()
+            loadstring(game:HttpGet("https://rawusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))()
         end)
     end
 })
@@ -918,7 +1077,7 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait(1)
+        task.wait(1.5)
     end
 end)
 
@@ -951,7 +1110,7 @@ task.spawn(function()
         end)
 
         while true do
-            task.wait(0.06)
+            task.wait(0.1)
 
             if autoSquirmEnabled and running then
                 if dir == "left" then
@@ -971,6 +1130,40 @@ end)
 -- ==============================================================================
 local MachineTab = Window:CreateTab("Machine", "cpu")
 MachineTab:CreateToggle({ Name = "Instant Skillcheck", CurrentValue = false, Flag = "InstantSkillcheck", Callback = function(v) getgenv().scinstant = v end })
+
+local instantStashGigiEnabled = false
+local originalHoldDurations = {}
+
+MachineTab:CreateToggle({
+    Name = "Instant Stash Gigi Machine Prompt",
+    CurrentValue = false,
+    Flag = "InstantStashGigiPrompt",
+    Callback = function(v)
+        instantStashGigiEnabled = v
+        if instantStashGigiEnabled then
+            task.spawn(function()
+                while instantStashGigiEnabled do
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        if obj:IsA("ProximityPrompt") then
+                            if not originalHoldDurations[obj] then
+                                originalHoldDurations[obj] = obj.HoldDuration
+                            end
+                            obj.HoldDuration = 0
+                        end
+                    end
+                    task.wait(1.5)
+                end
+            end)
+        else
+            for prompt, originalDuration in pairs(originalHoldDurations) do
+                if prompt and prompt.Parent then
+                    prompt.HoldDuration = originalDuration
+                end
+            end
+            originalHoldDurations = {}
+        end
+    end
+})
 
 MachineTab:CreateButton({ 
     Name = "Auto Arcade Machine", 
@@ -1089,7 +1282,7 @@ task.spawn(function()
                             end
                         end
                     end)
-                    task.wait()
+                    task.wait(0.2)
                 end
             end)
         end
@@ -1130,7 +1323,7 @@ task.spawn(function()
                         end
                     end
                 end
-                task.wait(1)
+                task.wait(2)
             end
         end)
     end)
@@ -1292,7 +1485,7 @@ FunTab:CreateToggle({ Name = "Enable Jump", CurrentValue = false, Flag = "Enable
     end
 end })
 
-FunTab:CreateSlider({ Name = "JumpPower", Range = {10, 250}, Increment = 5, CurrentValue = 50, Flag = "JumpPowerSlider", Callback = function(v)
+FunTab:CreateSlider({ Name = "Jump Power", Range = {10, 250}, Increment = 5, CurrentValue = 50, Flag = "JumpPowerSlider", Callback = function(v)
     jumpPowerVal = v
     if jumpEnabled and Humanoid then
         Humanoid.UseJumpPower = true
@@ -1306,7 +1499,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
-FunTab:CreateButton({ Name = "Reset Character", Callback = function()
+FunTab:CreateButton({ Name = "Kill Yourself", Callback = function()
     pcall(function()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
             LocalPlayer.Character.Humanoid.Health = 0
@@ -1317,11 +1510,5 @@ end })
 FunTab:CreateButton({ Name = "YouTube Music", Callback = function()
     pcall(function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-YouTube-Music-Player-V8-236600"))()
-    end)
-end })
-
-FunTab:CreateButton({ Name = "Shiftlock", Callback = function()
-    pcall(function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Mobile-Shiftlock-217580"))()
     end)
 end })
