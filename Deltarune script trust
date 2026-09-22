@@ -248,6 +248,56 @@ AutomationTab:CreateToggle({
     end
 })
 
+local autoCollectEventActive = false
+AutomationTab:CreateToggle({
+    Name = "Auto Collect Event Currency",
+    CurrentValue = false,
+    Flag = "AutoCollectEventCurrencyToggle",
+    Callback = function(v)
+        autoCollectEventActive = v
+        if autoCollectEventActive then
+            task.spawn(function()
+                if not Character or not HumanoidRootPart then return end
+                
+                while autoCollectEventActive do
+                    local eventItems = {}
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj.Name == "HolidayCollectibleItem" then
+                            local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                            if targetPart and prompt then
+                                table.insert(eventItems, {Part = targetPart, Prompt = prompt})
+                            end
+                        end
+                    end
+
+                    if #eventItems > 0 then
+                        local originalPosition = HumanoidRootPart.CFrame
+                        local collectedAny = false
+
+                        for _, item in ipairs(eventItems) do
+                            if not autoCollectEventActive then break end
+                            collectedAny = true
+                            HumanoidRootPart.CFrame = item.Part.CFrame + Vector3.new(0, 3, 0)
+                            task.wait(0.3)
+                            pcall(function()
+                                fireproximityprompt(item.Prompt)
+                            end)
+                            task.wait(0.4)
+                        end
+
+                        if collectedAny and HumanoidRootPart then
+                            HumanoidRootPart.CFrame = originalPosition
+                        end
+                    end
+                    
+                    task.wait(1)
+                end
+            end)
+        end
+    end
+})
+
 AutomationTab:CreateButton({
     Name = "Autofarm",
     Callback = function()
@@ -256,6 +306,113 @@ AutomationTab:CreateButton({
         end)
     end
 })
+
+-- Itens transferidos para a aba Automation
+local autoUseItemsEnabled = false
+AutomationTab:CreateToggle({
+    Name = "Auto Use Itens",
+    CurrentValue = false,
+    Flag = "AutoUseItemsToggle",
+    Callback = function(v)
+        autoUseItemsEnabled = v
+    end
+})
+
+task.spawn(function()
+    while true do
+        if autoUseItemsEnabled then
+            pcall(function()
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChild("Inventory") then
+                    local inv = char.Inventory
+                    for i = 1, 3 do
+                        local slot = inv:FindFirstChild("Slot" .. tostring(i))
+                        if slot then
+                            local args = {
+                                [1] = char,
+                                [2] = slot
+                            }
+                            ReplicatedStorage.Events.ItemEvent:InvokeServer(unpack(args))
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.8)
+    end
+end)
+
+local autoAbilityEnabled = false
+AutomationTab:CreateToggle({ 
+    Name = "Auto Use Ability", 
+    CurrentValue = false, 
+    Flag = "AutoAbilityToggle", 
+    Callback = function(v)
+        autoAbilityEnabled = v
+    end 
+})
+
+task.spawn(function()
+    while true do
+        if autoAbilityEnabled then
+            pcall(function()
+                if Character and HumanoidRootPart then
+                    local args = {
+                        [1] = Character,
+                        [2] = HumanoidRootPart.CFrame,
+                        [3] = false
+                    }
+                    ReplicatedStorage.Events.AbilityEvent:InvokeServer(unpack(args))
+                end
+            end)
+        end
+        task.wait(1.5)
+    end
+end)
+
+local autoSquirmEnabled = false
+AutomationTab:CreateToggle({
+    Name = "Auto Escape Squirm",
+    CurrentValue = false,
+    Flag = "AutoEscapeSquirmToggle",
+    Callback = function(v)
+        autoSquirmEnabled = v
+    end
+})
+
+task.spawn(function()
+    pcall(function()
+        local remote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("TwistedSquirmGrab")
+        local running = false
+        local dir = "left"
+
+        remote.OnClientEvent:Connect(function(action)
+            if autoSquirmEnabled then
+                if action == "GrabStart" then
+                    running = true
+                elseif action == "GrabEnd" then
+                    running = false
+                end
+            else
+                running = false
+            end
+        end)
+
+        while true do
+            task.wait(0.1)
+
+            if autoSquirmEnabled and running then
+                if dir == "left" then
+                    remote:FireServer("Struggle", "left")
+                    dir = "right"
+                else
+                    remote:FireServer("Struggle", "right")
+                    dir = "left"
+                end
+            end
+        end
+    end)
+end)
 
 -- ==============================================================================
 -- ESP TAB
@@ -347,7 +504,7 @@ EspTab:CreateToggle({
         for k in pairs(LethalList) do AllMonsters[k] = true end
 
         local function setupMonster(model)
-            if not model or not model:IsA("Model") or model:FindFirstChild("ESP_Container") then return end
+               if not model or not model:IsA("Model") or model:FindFirstChild("ESP_Container") then return end
             
             local head = model:FindFirstChild("Head") or model:FindFirstChild("HumanoidRootPart")
             if not head then return end
@@ -466,7 +623,7 @@ EspTab:CreateToggle({
             if twistedConnection then twistedConnection:Disconnect() end
             twistedConnection = Workspace.DescendantAdded:Connect(function(obj)
                 if twistedEspEnabled and obj:IsA("Model") and AllMonsters[obj.Name] then
-  task.wait(0.1)
+                    task.wait(0.1)
                     setupMonster(obj)
                 end
             end)
@@ -499,196 +656,119 @@ EspTab:CreateToggle({
     Flag = "PlayerEspToggle",
     Callback = function(v)
         playerEspEnabled = v
+        
+        -- Configurações de Cores
+        local COLOR_NORMAL_BLUE = Color3.fromRGB(0, 50, 150)
+        local COLOR_LOW_BLUE = Color3.fromRGB(0, 30, 100)
+        local COLOR_CRIT_BLUE = Color3.fromRGB(0, 15, 60)
+
+        local COLOR_NORMAL_GREEN = Color3.fromRGB(0, 255, 0)
+        local COLOR_LOW_GREEN = Color3.fromRGB(0, 180, 0)
+        local COLOR_CRIT_GREEN = Color3.fromRGB(0, 100, 0)
+
+        local function setupESP(player)
+            if player == LocalPlayer then return end
+
+            local function setupCharacter(char)
+                if not char then return end
+                local humanoidRootPart = char:WaitForChild("HumanoidRootPart", 5)
+                local humanoid = char:WaitForChild("Humanoid", 5)
+                local head = char:WaitForChild("Head", 5)
+
+                if not humanoidRootPart or not humanoid or not head then return end
+
+                -- Remove se já existir vestígio antigo
+                if char:FindFirstChild("CustomChams") then char.CustomChams:Destroy() end
+                if char:FindFirstChild("CustomNametag") then char.CustomNametag:Destroy() end
+
+                if not playerEspEnabled then return end
+
+                -- 1. Criação do Chams (Highlight)
+                local highlight = Instance.new("Highlight")
+                highlight.Name = "CustomChams"
+                highlight.Adornee = char
+                highlight.FillTransparency = 0.5
+                highlight.OutlineTransparency = 0
+                highlight.Parent = char
+
+                -- 2. Criação da Nametag (BillboardGui)
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "CustomNametag"
+                billboard.Adornee = head
+                billboard.Size = UDim2.new(0, 200, 0, 50)
+                billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+                billboard.AlwaysOnTop = true
+                billboard.Parent = char
+
+                local layout = Instance.new("UIListLayout")
+                layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                layout.VerticalAlignment = Enum.VerticalAlignment.Center
+                layout.SortOrder = Enum.SortOrder.LayoutOrder
+                layout.Parent = billboard
+
+                local nameLabel = Instance.new("TextLabel")
+                nameLabel.Name = "NickLabel"
+                nameLabel.Size = UDim2.new(1, 0, 0, 25)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.Text = player.Name
+                nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                nameLabel.TextSize = 14
+                nameLabel.Font = Enum.Font.FredokaOne
+                nameLabel.TextStrokeTransparency = 0.5
+                nameLabel.Parent = billboard
+
+                local healthLabel = Instance.new("TextLabel")
+                healthLabel.Name = "HealthLabel"
+                healthLabel.Size = UDim2.new(1, 0, 0, 25)
+                healthLabel.BackgroundTransparency = 1
+                healthLabel.TextSize = 14
+                healthLabel.Font = Enum.Font.FredokaOne
+                healthLabel.TextStrokeTransparency = 0.5
+                healthLabel.Parent = billboard
+
+                local connection
+                connection = RunService.RenderStepped:Connect(function()
+                    if not playerEspEnabled or not char or not char.Parent or not humanoid or humanoid.Health <= 0 then
+                        if highlight then highlight:Destroy() end
+                        if billboard then billboard:Destroy() end
+                        if connection then connection:Disconnect() end
+                        return
+                    end
+
+                    local currentHp = math.floor(humanoid.Health)
+                    healthLabel.Text = "Health: " .. currentHp
+
+                    if currentHp == 1 then
+                        highlight.FillColor = COLOR_CRIT_BLUE
+                        highlight.OutlineColor = COLOR_CRIT_BLUE
+                        healthLabel.TextColor3 = COLOR_CRIT_GREEN
+                    elseif currentHp <= 2 then
+                        highlight.FillColor = COLOR_LOW_BLUE
+                        highlight.OutlineColor = COLOR_LOW_BLUE
+                        healthLabel.TextColor3 = COLOR_LOW_GREEN
+                    else
+                        highlight.FillColor = COLOR_NORMAL_BLUE
+                        highlight.OutlineColor = COLOR_NORMAL_BLUE
+                        healthLabel.TextColor3 = COLOR_NORMAL_GREEN
+                    end
+                end)
+            end
+
+            if player.Character then
+                setupCharacter(player.Character)
+            end
+            player.CharacterAdded:Connect(setupCharacter)
+        end
+
         if playerEspEnabled then
-            task.spawn(function()
-                local ESP_SETTINGS = {
-                    TextSize = 16,
-                    Font = Drawing.Fonts.FredokaOne or Drawing.Fonts.Legacy or Drawing.Fonts.UI,
-                    Colors = {
-                        [3] = Color3.fromRGB(0, 150, 255),
-                        [2] = Color3.fromRGB(0, 100, 200),
-                        [1] = Color3.fromRGB(0, 50, 150),
-                        [0] = Color3.fromRGB(0, 0, 0)
-                    },
-                    NametagColor = Color3.fromRGB(255, 255, 255),
-                    HealthColor = Color3.fromRGB(0, 255, 0)
-                }
-
-                local espCache = {}
-
-                local function createESP(player)
-                    if player == LocalPlayer then return end
-
-                    local espData = {
-                        Nametag = Drawing.new("Text"),
-                        HealthText = Drawing.new("Text"),
-                        Highlight = nil,
-                        CachedHealth = 3
-                    }
-
-                    espData.Nametag.Visible = false
-                    espData.Nametag.Center = true
-                    espData.Nametag.Outline = true
-                    espData.Nametag.OutlineColor = Color3.fromRGB(0, 0, 0)
-                    espData.Nametag.Color = ESP_SETTINGS.NametagColor
-                    espData.Nametag.Size = ESP_SETTINGS.TextSize
-                    espData.Nametag.Font = ESP_SETTINGS.Font
-
-                    espData.HealthText.Visible = false
-                    espData.HealthText.Center = true
-                    espData.HealthText.Outline = true
-                    espData.HealthText.OutlineColor = Color3.fromRGB(0, 0, 0)
-                    espData.HealthText.Color = ESP_SETTINGS.HealthColor
-                    espData.HealthText.Size = ESP_SETTINGS.TextSize - 2
-                    espData.HealthText.Font = ESP_SETTINGS.Font
-
-                    espCache[player] = espData
-
-                    local function setupCharacter(character)
-                        if not character then return end
-                        character:WaitForChild("HumanoidRootPart", 5)
-
-                        if espData.Highlight then
-                            pcall(function() espData.Highlight:Destroy() end)
-                            espData.Highlight = nil
-                        end
-
-                        local success, highlight = pcall(function()
-                            local h = Instance.new("Highlight")
-                            h.Name = "CustomESP_Highlight"
-                            h.Adornee = character
-                            h.Parent = character
-                            h.FillTransparency = 0.4
-                            h.OutlineTransparency = 0
-                            h.FillColor = ESP_SETTINGS.Colors[3]
-                            h.OutlineColor = Color3.fromRGB(255, 255, 255)
-                            return h
-                        end)
-
-                        if success and highlight then
-                            espData.Highlight = highlight
-                        end
-                    end
-
-                    if player.Character then
-                        task.spawn(function() setupCharacter(player.Character) end)
-                    end
-
-                    player.CharacterAdded:Connect(setupCharacter)
-
-                    player.CharacterRemoving:Connect(function()
-                        espData.Nametag.Visible = false
-                        espData.HealthText.Visible = false
-                        if espData.Highlight then
-                            pcall(function() espData.Highlight:Destroy() end)
-                            espData.Highlight = nil
-                        end
-                    end)
-                end
-
-                local function removeESP(player)
-                    if espCache[player] then
-                        pcall(function()
-                            espCache[player].Nametag:Remove()
-                            espCache[player].HealthText:Remove()
-                            if espCache[player].Highlight then
-                                espCache[player].Highlight:Destroy()
-                            end
-                        end)
-                        espCache[player] = nil
-                    end
-                end
-
-                for _, player in ipairs(Players:GetPlayers()) do
-                    createESP(player)
-                end
-
-                local connAdd = Players.PlayerAdded:Connect(createESP)
-                local connRem = Players.PlayerRemoving:Connect(removeESP)
-
-                task.spawn(function()
-                    while playerEspEnabled do
-                        for player, esp in pairs(espCache) do
-                            local character = player.Character
-                            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-                            
-                            if humanoid then
-                                local health = math.clamp(math.floor(humanoid.Health), 0, 3)
-                                esp.CachedHealth = health
-                                local targetColor = ESP_SETTINGS.Colors[health] or ESP_SETTINGS.Colors[0]
-
-                                if esp.Highlight and esp.Highlight.Parent then
-                                    esp.Highlight.FillColor = targetColor
-                                    if health == 0 then
-                                        esp.Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                                    else
-                                        esp.Highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-                                    end
-                                elseif character and not esp.Highlight then
-                                    local h = Instance.new("Highlight")
-                                    h.Name = "CustomESP_Highlight"
-                                    h.Adornee = character
-                                    h.Parent = character
-                                    h.FillTransparency = 0.4
-                                    h.OutlineTransparency = 0
-                                    h.FillColor = targetColor
-                                    esp.Highlight = h
-                                end
-                            end
-                        end
-                        task.wait(1)
-                    end
-                    connAdd:Disconnect()
-                    connRem:Disconnect()
-                    for player, _ in pairs(espCache) do
-                        removeESP(player)
-                    end
-                end)
-
-                task.spawn(function()
-                    while playerEspEnabled do
-                        for player, esp in pairs(espCache) do
-                            local character = player.Character
-                            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-                            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-
-                            if character and rootPart and humanoid and humanoid.Health > 0 then
-                                local vector, onScreen = Camera:WorldToViewportPoint(rootPart.Position + Vector3.new(0, 3, 0))
-
-                                if onScreen then
-                                    esp.Nametag.Text = player.Name
-                                    esp.Nametag.Position = Vector2.new(vector.X, vector.Y - 18)
-                                    esp.Nametag.Visible = true
-
-                                    esp.HealthText.Text = "Health: " .. esp.CachedHealth
-                                    esp.HealthText.Position = Vector2.new(vector.X, vector.Y)
-                                    esp.HealthText.Visible = true
-                                else
-                                    esp.Nametag.Visible = false
-                                    esp.HealthText.Visible = false
-                                end
-                            else
-                                esp.Nametag.Visible = false
-                                esp.HealthText.Visible = false
-                            end
-                        end
-                        RunService.RenderStepped:Wait()
-                    end
-                    for _, esp in pairs(espCache) do
-                        pcall(function()
-                            esp.Nametag.Visible = false
-                            esp.HealthText.Visible = false
-                        end)
-                    end
-                end)
-            end)
+            for _, p in ipairs(Players:GetPlayers()) do
+                setupESP(p)
+            end
         else
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player.Character then
-                    local customHighlight = player.Character:FindFirstChild("CustomESP_Highlight")
-                    if customHighlight then
-                        customHighlight:Destroy()
-                    end
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p.Character then
+                    if p.Character:FindFirstChild("CustomChams") then p.Character.CustomChams:Destroy() end
+                    if p.Character:FindFirstChild("CustomNametag") then p.Character.CustomNametag:Destroy() end
                 end
             end
         end
@@ -739,7 +819,7 @@ EspTab:CreateToggle({
                 ["Protein Bar"] = Color3.fromRGB(0, 100, 0),
                 ["Jawbreaker"] = Color3.fromRGB(148, 0, 211),
                 ["Eject Button"] = Color3.fromRGB(255, 255, 0),
-                ["MedKit"] = Color3.fromRGB(255, 0, 127), -- Rosa bem forte atualizado aqui
+                ["MedKit"] = Color3.fromRGB(255, 0, 127),
                 ["Bandage"] = Color3.fromRGB(255, 20, 147),
                 ["Tape"] = Color3.fromRGB(128, 128, 128),
                 ["Instructions"] = Color3.fromRGB(148, 0, 211),
@@ -952,7 +1032,7 @@ TeleportTab:CreateDropdown({ Name = "Select Your Item", Options = itemsList, Cur
 TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = function() teleportTo(selectedItem, true) end })
 
 -- ==============================================================================
--- PLAYER TAB (COM O NO-SLIPPERY ATUALIZADO)
+-- PLAYER TAB
 -- ==============================================================================
 local PlayerTab = Window:CreateTab("Player", "user")
 
@@ -969,14 +1049,7 @@ PlayerTab:CreateToggle({
         local char = LocalPlayer.Character
         
         if noSlipperyEnabled then
-            -- Configuração de física pesada e fricção máxima
-            local physicalProperties = PhysicalProperties.new(
-                15.0,   -- Densidade ultra alta (peso)
-                3.0,    -- Fricção altíssima para anular o gelo
-                0.0,    -- Elasticidade zero
-                1.0,    -- Fricção do peso
-                1.0     -- Elasticidade do peso
-            )
+            local physicalProperties = PhysicalProperties.new(15.0, 3.0, 0.0, 1.0, 1.0)
             
             if char then
                 for _, part in ipairs(char:GetDescendants()) do
@@ -989,7 +1062,6 @@ PlayerTab:CreateToggle({
                 end
             end
 
-            -- Sistema de freio inercial para parar instantaneamente ao soltar as teclas
             if not brakeConnection then
                 brakeConnection = RunService.RenderStepped:Connect(function(dt)
                     if not noSlipperyEnabled then return end
@@ -1017,7 +1089,6 @@ PlayerTab:CreateToggle({
                 end)
             end
         else
-            -- Desativa o freio e restaura a física padrão
             if brakeConnection then
                 brakeConnection:Disconnect()
                 brakeConnection = nil
@@ -1084,40 +1155,6 @@ task.spawn(function()
     end
 end)
 
-local autoUseItemsEnabled = false
-PlayerTab:CreateToggle({
-    Name = "Auto Use Itens",
-    CurrentValue = false,
-    Flag = "AutoUseItemsToggle",
-    Callback = function(v)
-        autoUseItemsEnabled = v
-    end
-})
-
-task.spawn(function()
-    while true do
-        if autoUseItemsEnabled then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("Inventory") then
-                    local inv = char.Inventory
-                    for i = 1, 3 do
-                        local slot = inv:FindFirstChild("Slot" .. tostring(i))
-                        if slot then
-                            local args = {
-                                [1] = char,
-                                [2] = slot
-                            }
-                            ReplicatedStorage.Events.ItemEvent:InvokeServer(unpack(args))
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.8)
-    end
-end)
-
 PlayerTab:CreateButton({
     Name = "Infinite Stamina",
     Callback = function()
@@ -1158,73 +1195,6 @@ PlayerTab:CreateButton({
         end)
     end
 })
-
-local autoAbilityEnabled = false
-PlayerTab:CreateToggle({ Name = "Auto Use Ability", CurrentValue = false, Flag = "AutoAbilityToggle", Callback = function(v)
-    autoAbilityEnabled = v
-end })
-
-task.spawn(function()
-    while true do
-        if autoAbilityEnabled then
-            pcall(function()
-                if Character and HumanoidRootPart then
-                    local args = {
-                        [1] = Character,
-                        [2] = HumanoidRootPart.CFrame,
-                        [3] = false
-                    }
-                    ReplicatedStorage.Events.AbilityEvent:InvokeServer(unpack(args))
-                end
-            end)
-        end
-        task.wait(1.5)
-    end
-end)
-
-local autoSquirmEnabled = false
-PlayerTab:CreateToggle({
-    Name = "Auto Escape Squirm",
-    CurrentValue = false,
-    Flag = "AutoEscapeSquirmToggle",
-    Callback = function(v)
-        autoSquirmEnabled = v
-    end
-})
-
-task.spawn(function()
-    pcall(function()
-        local remote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("TwistedSquirmGrab")
-        local running = false
-        local dir = "left"
-
-        remote.OnClientEvent:Connect(function(action)
-            if autoSquirmEnabled then
-                if action == "GrabStart" then
-                    running = true
-                elseif action == "GrabEnd" then
-                    running = false
-                end
-            else
-                running = false
-            end
-        end)
-
-        while true do
-            task.wait(0.1)
-
-            if autoSquirmEnabled and running then
-                if dir == "left" then
-                    remote:FireServer("Struggle", "left")
-                    dir = "right"
-                else
-                    remote:FireServer("Struggle", "right")
-                    dir = "left"
-                end
-            end
-        end
-    end)
-end)
 
 -- ==============================================================================
 -- MACHINE TAB
@@ -1430,7 +1400,6 @@ task.spawn(function()
     end)
 end)
 
--- Novo hook integrado para o SkillcheckUpdate
 task.spawn(function()
     getgenv().scinstant = false
     pcall(function()
@@ -1547,6 +1516,49 @@ FunTab:CreateSlider({ Name = "Spin Speed", Range = {5, 100}, Increment = 1, Curr
     spinSpeed = v
 end })
 
+-- FOV CHANGER
+local fovEnabled = false
+local fovValue = 70 -- FOV padrão do Roblox
+local fovConnection = nil
+
+FunTab:CreateToggle({
+    Name = "FOV Changer",
+    CurrentValue = false,
+    Flag = "FovToggle",
+    Callback = function(v)
+        fovEnabled = v
+        if fovEnabled then
+            fovConnection = RunService.RenderStepped:Connect(function()
+                if Camera then
+                    Camera.FieldOfView = fovValue
+                end
+            end)
+        else
+            if fovConnection then
+                fovConnection:Disconnect()
+                fovConnection = nil
+            end
+            if Camera then
+                Camera.FieldOfView = 70 -- Restaura para o padrão ao desativar
+            end
+        end
+    end
+})
+
+FunTab:CreateSlider({
+    Name = "FOV Value",
+    Range = {10, 200},
+    Increment = 1,
+    CurrentValue = 70,
+    Flag = "FovSlider",
+    Callback = function(v)
+        fovValue = v
+        if fovEnabled and Camera then
+            Camera.FieldOfView = fovValue
+        end
+    end
+})
+
 local jumpEnabled = false
 local jumpPowerVal = 50
 local jumpConnection = nil
@@ -1611,6 +1623,55 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
+FunTab:CreateButton({
+    Name = "HardCore Mode",
+    Callback = function()
+        pcall(function()
+            Lighting.FogColor = Color3.fromRGB(0, 0, 0)
+            Lighting.FogStart = 0
+            Lighting.FogEnd = 50
+            Lighting.Brightness = 0
+            
+            pcall(function()
+                for _, sound in ipairs(workspace:GetDescendants()) do
+                    if sound:IsA("Sound") then
+                        sound.Volume = 0
+                    end
+                end
+                local SoundService = game:GetService("SoundService")
+                SoundService.Volume = 0
+            end)
+
+            task.spawn(function()
+                while true do
+                    pcall(function()
+                        local currentRoom = Workspace:FindFirstChild("CurrentRoom")
+                        if currentRoom then
+                            local monstersFolder = currentRoom:FindFirstChild("Monsters")
+                            if monstersFolder then
+                                monstersFolder:ClearAllChildren()
+                            end
+                        end
+
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                            local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                            hum.WalkSpeed = 22
+                            speedValue = 22
+                        end
+                    end)
+                    task.wait(0.1)
+                end
+            end)
+            
+            Rayfield:Notify({
+                Title = "Good Luck. :)",
+                Content = "",
+                Duration = 2
+            })
+        end)
+    end
+})
+
 FunTab:CreateButton({ Name = "Kill Yourself", Callback = function()
     pcall(function()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
@@ -1624,3 +1685,4 @@ FunTab:CreateButton({ Name = "YouTube Music", Callback = function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-YouTube-Music-Player-V8-236600"))()
     end)
 end })
+
