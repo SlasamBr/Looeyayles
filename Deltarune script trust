@@ -307,6 +307,15 @@ AutomationTab:CreateButton({
     end
 })
 
+AutomationTab:CreateButton({
+    Name = "Alternative Autofarm (Incase If the other one don't work)",
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/BluuGuy-Sure/BluuHead-Dandy-s-World/refs/heads/main/JustThisOnce.lua"))()
+        end)
+    end
+})
+
 -- Itens transferidos para a aba Automation
 local autoUseItemsEnabled = false
 AutomationTab:CreateToggle({
@@ -419,8 +428,18 @@ end)
 -- ==============================================================================
 local EspTab = Window:CreateTab("Esp", "eye")
 
-       
-local ColorChangingList = {
+local twistedEspEnabled = false
+local activeTwistedMonsters = {}
+local twistedConnection = nil
+
+EspTab:CreateToggle({
+    Name = "Twisted Esp",
+    CurrentValue = false,
+    Flag = "TwistedEspToggle",
+    Callback = function(v)
+        twistedEspEnabled = v
+        
+        local ColorChangingList = {
             ["GourdyMonster"] = true, ["BassieMonster"] = true, ["BobetteMonster"] = true,
             ["VeeMonster"] = true, ["DyleMonster"] = true, ["DandyMonster"] = true,
             ["AstroMonster"] = true, ["PebbleMonster"] = true, ["ShellyMonster"] = true,
@@ -638,7 +657,7 @@ local ColorChangingList = {
         end
     end
 })
- 
+
 local playerEspEnabled = false
 EspTab:CreateToggle({
     Name = "Player Esp",
