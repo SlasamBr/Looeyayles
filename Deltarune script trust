@@ -307,15 +307,6 @@ AutomationTab:CreateButton({
     end
 })
 
-AutomationTab:CreateButton({
-    Name = "Alternative Autofarm (Incase If The Other One don't Works",
-    Callback = function()
-        pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/BluuGuy-Sure/BluuHead-Dandy-s-World/refs/heads/main/JustThisOnce.lua"))()
-        end)
-    end
-})
-
 -- Itens transferidos para a aba Automation
 local autoUseItemsEnabled = false
 AutomationTab:CreateToggle({
