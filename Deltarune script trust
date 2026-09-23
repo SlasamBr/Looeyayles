@@ -307,6 +307,15 @@ AutomationTab:CreateButton({
     end
 })
 
+AutomationTab:CreateButton({
+    Name = "Alternative Autofarm (Incase If The Other One don't Works",
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/BluuGuy-Sure/BluuHead-Dandy-s-World/refs/heads/main/JustThisOnce.lua"))()
+        end)
+    end
+})
+
 -- Itens transferidos para a aba Automation
 local autoUseItemsEnabled = false
 AutomationTab:CreateToggle({
@@ -419,17 +428,6 @@ end)
 -- ==============================================================================
 local EspTab = Window:CreateTab("Esp", "eye")
 
-local twistedEspEnabled = false
-local twistedConnection = nil
-local activeTwistedMonsters = {}
-
-EspTab:CreateToggle({
-    Name = "Twisted Esp",
-    CurrentValue = false,
-    Flag = "TwistedEspToggle",
-    Callback = function(v)
-        twistedEspEnabled = v
-        
         local ColorChangingList = {
             ["GourdyMonster"] = true, ["BassieMonster"] = true, ["BobetteMonster"] = true,
             ["VeeMonster"] = true, ["DyleMonster"] = true, ["DandyMonster"] = true,
@@ -504,7 +502,7 @@ EspTab:CreateToggle({
         for k in pairs(LethalList) do AllMonsters[k] = true end
 
         local function setupMonster(model)
-               if not model or not model:IsA("Model") or model:FindFirstChild("ESP_Container") then return end
+            if not model or not model:IsA("Model") or model:FindFirstChild("ESP_Container") then return end
             
             local head = model:FindFirstChild("Head") or model:FindFirstChild("HumanoidRootPart")
             if not head then return end
@@ -648,7 +646,7 @@ EspTab:CreateToggle({
         end
     end
 })
-
+ 
 local playerEspEnabled = false
 EspTab:CreateToggle({
     Name = "Player Esp",
