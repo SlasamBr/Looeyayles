@@ -197,8 +197,41 @@ end)
 -- AUTOMATION TAB
 -- ==============================================================================
 local AutomationTab = Window:CreateTab("Automation", "cpu")
-local autoCollectActive = false
 
+local autoGetToElevatorEnabled = false
+AutomationTab:CreateToggle({
+    Name = "Auto Get To Elevator",
+    CurrentValue = false,
+    Flag = "AutoGetToElevatorToggle",
+    Callback = function(v)
+        autoGetToElevatorEnabled = v
+    end
+})
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if autoGetToElevatorEnabled then
+            pcall(function()
+                local infoFolder = Workspace:FindFirstChild("Info")
+                local panicValue = infoFolder and infoFolder:FindFirstChild("Panic")
+                local elevatorsFolder = Workspace:FindFirstChild("Elevators")
+                
+                if panicValue and panicValue.Value == true and elevatorsFolder and HumanoidRootPart then
+                    local elevator = elevatorsFolder:FindFirstChild("Elevator") or elevatorsFolder:FindFirstChildOfClass("Model")
+                    if elevator then
+                        local targetPart = elevator.PrimaryPart or elevator:FindFirstChild("Hitbox") or elevator:FindFirstChildWhichIsA("BasePart")
+                        if targetPart then
+                            HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+local autoCollectActive = false
 AutomationTab:CreateToggle({
     Name = "Auto Collect Research Capsules",
     CurrentValue = false,
@@ -316,7 +349,6 @@ AutomationTab:CreateButton({
     end
 })
 
--- Itens transferidos para a aba Automation
 local autoUseItemsEnabled = false
 AutomationTab:CreateToggle({
     Name = "Auto Use Itens",
@@ -429,6 +461,7 @@ end)
 local EspTab = Window:CreateTab("Esp", "eye")
 
 local twistedEspEnabled = false
+local twistedDisableNametags = false
 local activeTwistedMonsters = {}
 local twistedConnection = nil
 
@@ -534,6 +567,7 @@ EspTab:CreateToggle({
             billboard.Size = UDim2.new(0, 180, 0, 35)
             billboard.StudsOffset = Vector3.new(0, 4.2, 0)
             billboard.AlwaysOnTop = true
+            billboard.Enabled = not twistedDisableNametags
 
             local textLabel = Instance.new("TextLabel", billboard)
             textLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -566,7 +600,7 @@ EspTab:CreateToggle({
                 rarityText = " | Lethal"
             end
 
-            table.insert(activeTwistedMonsters, container)
+            table.insert(activeTwistedMonsters, billboard)
 
             task.spawn(function()
                 local alpha = 0
@@ -586,9 +620,6 @@ EspTab:CreateToggle({
                     
                     if rootPart then
                         local extraText = ""
-                        if model.Name == "RodgerMonster" then
-                            extraText = "Fake capsule⚠️\n"
-                        end
 
                         local displayName = model.Name:gsub("Monster", "")
                         if BlotHandsList[model.Name] then
@@ -658,7 +689,24 @@ EspTab:CreateToggle({
     end
 })
 
+EspTab:CreateToggle({
+    Name = "Disable Twisted Esp Nametags",
+    CurrentValue = false,
+    Flag = "TwistedDisableNametagsToggle",
+    Callback = function(v)
+        twistedDisableNametags = v
+        for _, tag in ipairs(activeTwistedMonsters) do
+            if tag and tag.Parent then
+                tag.Enabled = not twistedDisableNametags
+            end
+        end
+    end
+})
+
 local playerEspEnabled = false
+local playerDisableNametags = false
+local activePlayerNametags = {}
+
 EspTab:CreateToggle({
     Name = "Player Esp",
     CurrentValue = false,
@@ -666,7 +714,6 @@ EspTab:CreateToggle({
     Callback = function(v)
         playerEspEnabled = v
         
-        -- Configurações de Cores
         local COLOR_NORMAL_BLUE = Color3.fromRGB(0, 50, 150)
         local COLOR_LOW_BLUE = Color3.fromRGB(0, 30, 100)
         local COLOR_CRIT_BLUE = Color3.fromRGB(0, 15, 60)
@@ -686,13 +733,11 @@ EspTab:CreateToggle({
 
                 if not humanoidRootPart or not humanoid or not head then return end
 
-                -- Remove se já existir vestígio antigo
                 if char:FindFirstChild("CustomChams") then char.CustomChams:Destroy() end
                 if char:FindFirstChild("CustomNametag") then char.CustomNametag:Destroy() end
 
                 if not playerEspEnabled then return end
 
-                -- 1. Criação do Chams (Highlight)
                 local highlight = Instance.new("Highlight")
                 highlight.Name = "CustomChams"
                 highlight.Adornee = char
@@ -700,14 +745,16 @@ EspTab:CreateToggle({
                 highlight.OutlineTransparency = 0
                 highlight.Parent = char
 
-                -- 2. Criação da Nametag (BillboardGui)
                 local billboard = Instance.new("BillboardGui")
                 billboard.Name = "CustomNametag"
                 billboard.Adornee = head
                 billboard.Size = UDim2.new(0, 200, 0, 50)
                 billboard.StudsOffset = Vector3.new(0, 2.5, 0)
                 billboard.AlwaysOnTop = true
+                billboard.Enabled = not playerDisableNametags
                 billboard.Parent = char
+
+                table.insert(activePlayerNametags, billboard)
 
                 local layout = Instance.new("UIListLayout")
                 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -774,6 +821,7 @@ EspTab:CreateToggle({
                 setupESP(p)
             end
         else
+            activePlayerNametags = {}
             for _, p in ipairs(Players:GetPlayers()) do
                 if p.Character then
                     if p.Character:FindFirstChild("CustomChams") then p.Character.CustomChams:Destroy() end
@@ -784,7 +832,24 @@ EspTab:CreateToggle({
     end
 })
 
+EspTab:CreateToggle({
+    Name = "Disable Player Esp Nametags",
+    CurrentValue = false,
+    Flag = "PlayerDisableNametagsToggle",
+    Callback = function(v)
+        playerDisableNametags = v
+        for _, tag in ipairs(activePlayerNametags) do
+            if tag and tag.Parent then
+                tag.Enabled = not playerDisableNametags
+            end
+        end
+    end
+})
+
 local itemEspEnabled = false
+local itemDisableNametags = false
+local activeItemNametags = {}
+
 EspTab:CreateToggle({
     Name = "Item Esp",
     CurrentValue = false,
@@ -818,7 +883,8 @@ EspTab:CreateToggle({
                 Stopwatch = "Stopwatch",
                 ChristmasCookie = "Christmas Cookie",
                 DandyEasterEggs = "Dandy Easter Eggs",
-                HolidayCollectibleItem = "Pumpkins"
+                HolidayCollectibleItem = "Pumpkins",
+                FakeCapsule = "Fake Capsule"
             }
 
             local cols = {
@@ -847,7 +913,8 @@ EspTab:CreateToggle({
                 ["Stopwatch"] = Color3.fromRGB(255, 255, 255),
                 ["Christmas Cookie"] = Color3.fromRGB(255, 255, 0),
                 ["Dandy Easter Eggs"] = Color3.fromRGB(255, 255, 0),
-                ["Pumpkins"] = Color3.fromRGB(255, 140, 0)
+                ["Pumpkins"] = Color3.fromRGB(255, 140, 0),
+                ["Fake Capsule"] = Color3.fromRGB(255, 255, 0)
             }
 
             local function apply(obj)
@@ -882,6 +949,9 @@ EspTab:CreateToggle({
                     bb.Size = UDim2.new(0, 200, 0, 50)
                     bb.StudsOffset = Vector3.new(0, 2.5, 0)
                     bb.AlwaysOnTop = true
+                    bb.Enabled = not itemDisableNametags
+
+                    table.insert(activeItemNametags, bb)
 
                     local txt = Instance.new("TextLabel", bb)
                     txt.Size = UDim2.new(1, 0, 1, 0)
@@ -910,7 +980,7 @@ EspTab:CreateToggle({
             end
 
             task.spawn(function()
-                while itemEspEnabled do
+              while itemEspEnabled do
                     for _, o in ipairs(workspace:GetDescendants()) do
                         if itemMap[o.Name] then 
                             apply(o) 
@@ -920,6 +990,7 @@ EspTab:CreateToggle({
                 end
             end)
         else
+            activeItemNametags = {}
             for _, o in ipairs(workspace:GetDescendants()) do
                 local added = o:FindFirstChild("ESP_Added")
                 if added then added:Destroy() end
@@ -932,9 +1003,25 @@ EspTab:CreateToggle({
     end
 })
 
-local generatorEspEnabled = false
 EspTab:CreateToggle({
-    Name = "Generator Esp",
+    Name = "Disable Item Esp Nametags",
+    CurrentValue = false,
+    Flag = "ItemDisableNametagsToggle",
+    Callback = function(v)
+        itemDisableNametags = v
+        for _, tag in ipairs(activeItemNametags) do
+            if tag and tag.Parent then
+                tag.Enabled = not itemDisableNametags
+            end
+        end
+    end
+})
+
+local generatorEspEnabled = false
+local generatorConn = nil
+
+EspTab:CreateToggle({
+    Name = "Machine Esp",
     CurrentValue = false,
     Flag = "GeneratorEspToggle",
     Callback = function(v)
@@ -949,17 +1036,24 @@ EspTab:CreateToggle({
                 ["Gachapon_Arcade_03"] = true
             }
 
-            local function applyESP(generator)
-                if ignoredNames[generator.Name] then return end
-                if generator:FindFirstChild("CustomESP") then return end
+            local function applyESP(model)
+                if not model or not model:IsA("Model") or ignoredNames[model.Name] then return end
                 
+                local nameLower = model.Name:lower()
+                local isMachine = (nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("machine"))
+                if not isMachine then return end
+
+                if model:FindFirstChild("CustomESP") then
+                    model.CustomESP:Destroy()
+                end
+
                 local folder = Instance.new("Folder")
                 folder.Name = "CustomESP"
-                folder.Parent = generator
+                folder.Parent = model
 
                 local highlight = Instance.new("Highlight")
                 highlight.Name = "Chams"
-                highlight.Adornee = generator
+                highlight.Adornee = model
                 highlight.FillColor = Color3.fromRGB(255, 255, 255)
                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                 highlight.FillTransparency = 0.5
@@ -969,7 +1063,7 @@ EspTab:CreateToggle({
                 task.spawn(function()
                     local white = Color3.fromRGB(255, 255, 255)
                     local softBlack = Color3.fromRGB(40, 40, 40)
-                    while generatorEspEnabled and generator and generator.Parent and highlight and highlight.Parent do
+                    while generatorEspEnabled and model and model.Parent and highlight and highlight.Parent do
                         local alpha = math.abs(((tick() / 2) % 2) - 1)
                         local lerpedColor = white:Lerp(softBlack, alpha)
                         highlight.FillColor = lerpedColor
@@ -978,23 +1072,279 @@ EspTab:CreateToggle({
                 end)
             end
 
-            task.spawn(function()
-                while generatorEspEnabled do
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        if not ignoredNames[obj.Name] then
-                            local nameLower = obj.Name:lower()
-                            if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("machine") then
-                                applyESP(obj)
-                            end
-                        end
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") then
+                    applyESP(obj)
+                end
+            end
+
+            if not generatorConn then
+                generatorConn = workspace.DescendantAdded:Connect(function(obj)
+                    if generatorEspEnabled and obj:IsA("Model") then
+                        task.wait(0.1)
+                        applyESP(obj)
                     end
-                    task.wait(3)
+                end)
+            end
+        else
+            if generatorConn then
+                generatorConn:Disconnect()
+                generatorConn = nil
+            end
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("Model") then
+                    local custom = obj:FindFirstChild("CustomESP")
+                    if custom then custom:Destroy() end
+                end
+            end
+        end
+    end
+})
+
+-- ==============================================================================
+-- NOVOS ESPs (Ichor Puddles, Elevator, Fake Elevator)
+-- ==============================================================================
+
+local ichorEspEnabled = false
+local ichorDisableNametags = false
+local activeIchorNametags = {}
+
+EspTab:CreateToggle({
+    Name = "Ichor Puddles Esp",
+    CurrentValue = false,
+    Flag = "IchorPuddlesEspToggle",
+    Callback = function(v)
+        ichorEspEnabled = v
+        if ichorEspEnabled then
+            local function applyIchor(obj)
+                if obj:FindFirstChild("IchorESP") then return end
+                local name = obj.Name
+                if name == "IchorPuddle" or name == "IchorPuddles" or name == "FinnIchorPuddles" or name == "FinnIchorPuddle" then
+                    local folder = Instance.new("Folder")
+                    folder.Name = "IchorESP"
+                    folder.Parent = obj
+
+                    local highlight = Instance.new("Highlight", folder)
+                    highlight.Adornee = obj
+                    highlight.FillColor = Color3.fromRGB(0, 0, 0)
+                    highlight.FillTransparency = 0.5
+                    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                    highlight.OutlineTransparency = 0
+
+                    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
+                    if part then
+                        local bb = Instance.new("BillboardGui", folder)
+                        bb.Name = "Nametag"
+                        bb.Adornee = part
+                        bb.Size = UDim2.new(0, 200, 0, 50)
+                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Enabled = not ichorDisableNametags
+
+                        table.insert(activeIchorNametags, bb)
+
+                        local txt = Instance.new("TextLabel", bb)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = name
+                        txt.TextColor3 = Color3.fromRGB(0, 0, 0)
+                        txt.TextSize = 12
+                        txt.Font = Enum.Font.FredokaOne
+                        txt.TextStrokeTransparency = 0
+                        txt.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+                    end
+                end
+            end
+
+            task.spawn(function()
+                while ichorEspEnabled do
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        applyIchor(obj)
+                    end
+                    task.wait(2)
                 end
             end)
         else
+            activeIchorNametags = {}
             for _, obj in ipairs(workspace:GetDescendants()) do
-                local custom = obj:FindFirstChild("CustomESP")
+                local custom = obj:FindFirstChild("IchorESP")
                 if custom then custom:Destroy() end
+            end
+        end
+    end
+})
+
+EspTab:CreateToggle({
+    Name = "Disable Ichor Puddles Nametags",
+    CurrentValue = false,
+    Flag = "IchorDisableNametagsToggle",
+    Callback = function(v)
+        ichorDisableNametags = v
+        for _, tag in ipairs(activeIchorNametags) do
+            if tag and tag.Parent then
+                tag.Enabled = not ichorDisableNametags
+            end
+        end
+    end
+})
+
+local elevatorEspEnabled = false
+local elevatorDisableNametags = false
+local activeElevatorNametags = {}
+
+EspTab:CreateToggle({
+    Name = "Elevator Esp",
+    CurrentValue = false,
+    Flag = "ElevatorEspToggle",
+    Callback = function(v)
+        elevatorEspEnabled = v
+        if elevatorEspEnabled then
+            local function applyElevator(obj)
+                if obj:FindFirstChild("ElevatorESP") then return end
+                if obj.Name == "ElevatorDoor" then
+                    local folder = Instance.new("Folder")
+                    folder.Name = "ElevatorESP"
+                    folder.Parent = obj
+
+                    local highlight = Instance.new("Highlight", folder)
+                    highlight.Adornee = obj
+                    highlight.FillColor = Color3.fromRGB(0, 0, 0)
+                    highlight.FillTransparency = 0.5
+                    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                    highlight.OutlineTransparency = 0
+
+                    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
+                    if part then
+                        local bb = Instance.new("BillboardGui", folder)
+                        bb.Name = "Nametag"
+                        bb.Adornee = part
+                        bb.Size = UDim2.new(0, 200, 0, 50)
+                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Enabled = not elevatorDisableNametags
+
+                        table.insert(activeElevatorNametags, bb)
+
+                        local txt = Instance.new("TextLabel", bb)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = "Elevator"
+                        txt.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        txt.TextSize = 12
+                        txt.Font = Enum.Font.FredokaOne
+                        txt.TextStrokeTransparency = 0
+                    end
+                end
+            end
+
+            task.spawn(function()
+                while elevatorEspEnabled do
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        applyElevator(obj)
+                    end
+                    task.wait(2)
+                end
+            end)
+        else
+            activeElevatorNametags = {}
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                local custom = obj:FindFirstChild("ElevatorESP")
+                if custom then custom:Destroy() end
+            end
+        end
+    end
+})
+
+EspTab:CreateToggle({
+    Name = "Disable Elevator Esp Nametags",
+    CurrentValue = false,
+    Flag = "ElevatorDisableNametagsToggle",
+    Callback = function(v)
+        elevatorDisableNametags = v
+        for _, tag in ipairs(activeElevatorNametags) do
+            if tag and tag.Parent then
+                tag.Enabled = not elevatorDisableNametags
+            end
+        end
+    end
+})
+
+local fakeElevatorEspEnabled = false
+local fakeElevatorDisableNametags = false
+local activeFakeElevatorNametags = {}
+
+EspTab:CreateToggle({
+    Name = "Fake Elevator Esp",
+    CurrentValue = false,
+    Flag = "FakeElevatorEspToggle",
+    Callback = function(v)
+        fakeElevatorEspEnabled = v
+        if fakeElevatorEspEnabled then
+            local function applyFakeElevator(obj)
+                if obj:FindFirstChild("FakeElevatorESP") then return end
+                if obj.Name:lower():find("fakeelevator") or obj.Name:lower():find("fake_elevator") then
+                    local folder = Instance.new("Folder")
+                    folder.Name = "FakeElevatorESP"
+                    folder.Parent = obj
+
+                    local highlight = Instance.new("Highlight", folder)
+                    highlight.Adornee = obj
+                    highlight.FillColor = Color3.fromRGB(255, 255, 150)
+                    highlight.FillTransparency = 0.7
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 150)
+                    highlight.OutlineTransparency = 0.5
+
+                    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
+                    if part then
+                        local bb = Instance.new("BillboardGui", folder)
+                        bb.Name = "Nametag"
+                        bb.Adornee = part
+                        bb.Size = UDim2.new(0, 200, 0, 50)
+                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Enabled = not fakeElevatorDisableNametags
+
+                        table.insert(activeFakeElevatorNametags, bb)
+
+                        local txt = Instance.new("TextLabel", bb)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = "Fake Elevator"
+                        txt.TextColor3 = Color3.fromRGB(255, 255, 150)
+                        txt.TextSize = 12
+                        txt.Font = Enum.Font.FredokaOne
+                        txt.TextStrokeTransparency = 0
+                    end
+                end
+            end
+
+            task.spawn(function()
+                while fakeElevatorEspEnabled do
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        applyFakeElevator(obj)
+                    end
+                    task.wait(2)
+                end
+            end)
+        else
+            activeFakeElevatorNametags = {}
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                local custom = obj:FindFirstChild("FakeElevatorESP")
+                if custom then custom:Destroy() end
+            end
+        end
+    end
+})
+
+EspTab:CreateToggle({
+    Name = "Disable Fake Elevator Nametags",
+    CurrentValue = false,
+    Flag = "FakeElevatorDisableNametagsToggle",
+    Callback = function(v)
+        fakeElevatorDisableNametags = v
+        for _, tag in ipairs(activeFakeElevatorNametags) do
+            if tag and tag.Parent then
+                tag.Enabled = not fakeElevatorDisableNametags
             end
         end
     end
@@ -1035,7 +1385,7 @@ TeleportTab:CreateButton({ Name = "Teleport To Machine", Callback = function()
 end })
 
 TeleportTab:CreateSection("Items Teleport")
-local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "HolidayCollectibleItem"}
+local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "HolidayCollectibleItem", "FakeCapsule"}
 local selectedItem = itemsList[1]
 TeleportTab:CreateDropdown({ Name = "Select Your Item", Options = itemsList, CurrentOption = {itemsList[1]}, Flag = "SelectedItemTp", Callback = function(opt) selectedItem = type(opt) == "table" and opt[1] or opt end })
 TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = function() teleportTo(selectedItem, true) end })
@@ -1525,9 +1875,8 @@ FunTab:CreateSlider({ Name = "Spin Speed", Range = {5, 100}, Increment = 1, Curr
     spinSpeed = v
 end })
 
--- FOV CHANGER
 local fovEnabled = false
-local fovValue = 70 -- FOV padrão do Roblox
+local fovValue = 70
 local fovConnection = nil
 
 FunTab:CreateToggle({
@@ -1548,7 +1897,7 @@ FunTab:CreateToggle({
                 fovConnection = nil
             end
             if Camera then
-                Camera.FieldOfView = 70 -- Restaura para o padrão ao desativar
+                Camera.FieldOfView = 70
             end
         end
     end
@@ -1694,4 +2043,3 @@ FunTab:CreateButton({ Name = "YouTube Music", Callback = function()
         loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-YouTube-Music-Player-V8-236600"))()
     end)
 end })
-
