@@ -1119,7 +1119,7 @@ EspTab:CreateToggle({
             local function applyIchor(obj)
                 if obj:FindFirstChild("IchorESP") then return end
                 local name = obj.Name
-                if name == "IchorPuddle" or name == "IchorPuddles" or name == "FinnIchorPuddles" or name == "FinnIchorPuddle" then
+                if name == "Ichor_Puddle_01" or name == "Ichor_Puddle_02" or name == "Ichor_Puddle_03" or name == "FinnIchorPuddle" then
                     local folder = Instance.new("Folder")
                     folder.Name = "IchorESP"
                     folder.Parent = obj
