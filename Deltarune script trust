@@ -1128,7 +1128,7 @@ EspTab:CreateToggle({
                     highlight.Adornee = obj
                     highlight.FillColor = Color3.fromRGB(0, 0, 0)
                     highlight.FillTransparency = 0.5
-                    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Outline branca
                     highlight.OutlineTransparency = 0
 
                     local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
@@ -1143,10 +1143,15 @@ EspTab:CreateToggle({
 
                         table.insert(activeIchorNametags, bb)
 
+                        local displayName = "Ichor Puddle"
+                        if name == "FinnIchorPuddle" then
+                            displayName = "Finn Ichor Puddle"
+                        end
+
                         local txt = Instance.new("TextLabel", bb)
                         txt.Size = UDim2.new(1, 0, 1, 0)
                         txt.BackgroundTransparency = 1
-                        txt.Text = name
+                        txt.Text = displayName
                         txt.TextColor3 = Color3.fromRGB(0, 0, 0)
                         txt.TextSize = 12
                         txt.Font = Enum.Font.FredokaOne
@@ -1394,6 +1399,84 @@ TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = functi
 -- PLAYER TAB
 -- ==============================================================================
 local PlayerTab = Window:CreateTab("Player", "user")
+
+-- Anti Lag Button
+PlayerTab:CreateButton({
+    Name = "Anti Lag",
+    Callback = function()
+        pcall(function()
+            -- 1. Remover/Simplificar Efeitos Visuais do Ambiente (Lighting)
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 9e9
+
+            for _, v in pairs(Lighting:GetChildren()) do
+                if v:IsA("PostEffect") or v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") then
+                    v.Enabled = false
+                end
+            end
+
+            -- 2. Função para otimizar um objeto e seus descendentes
+            local function optimizeObject(object)
+                if object:IsA("ParticleEmitter") or object:IsA("Trail") or object:IsA("Smoke") or object:IsA("Fire") or object:IsA("Sparkles") then
+                    object.Enabled = false
+                elseif object:IsA("Light") then
+                    object.Enabled = false
+                elseif object:IsA("BasePart") then
+                    object.Material = Enum.Material.SmoothPlastic
+                    object.Reflectance = 0
+                    object.CastShadow = false
+                    if object.Parent and object.Parent:FindFirstChildOfClass("Humanoid") then
+                        if object.Parent.Humanoid.Health <= 0 then
+                            object.CanCollide = false
+                        end
+                    end
+                elseif object:IsA("Decal") or object:IsA("Texture") then
+                    object.Transparency = 1
+                end
+            end
+
+            -- 3. Otimizar tudo o que já existe no Workspace
+            for _, descendant in pairs(Workspace:GetDescendants()) do
+                optimizeObject(descendant)
+            end
+
+            -- 4. Monitorar novos elementos que aparecem na partida
+            Workspace.DescendantAdded:Connect(function(descendant)
+                task.wait()
+                optimizeObject(descendant)
+            end)
+        end)
+    end
+})
+
+-- Anti Vee Popup Toggle
+local antiVeePopupEnabled = false
+PlayerTab:CreateToggle({
+    Name = "Anti Vee Popup",
+    CurrentValue = false,
+    Flag = "AntiVeePopupToggle",
+    Callback = function(v)
+        antiVeePopupEnabled = v
+    end
+})
+
+task.spawn(function()
+    while true do
+        if antiVeePopupEnabled then
+            pcall(function()
+                local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+                if playerGui then
+                    for _, gui in ipairs(playerGui:GetDescendants()) do
+                        if gui.Name == "PopUpFrame" or gui.Name:lower():find("veepopup") or gui.Name:lower():find("vee_popup") then
+                            gui.Visible = false
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.5)
+    end
+end)
 
 local noSlipperyEnabled = false
 local defaultPhysicalProperties = {}
@@ -1953,7 +2036,7 @@ FunTab:CreateToggle({ Name = "Enable Jump", CurrentValue = false, Flag = "Enable
         end
         pcall(function()
             local touchGui = LocalPlayer.PlayerGui:FindFirstChild("TouchGui")
-            if touchGui then
+         if touchGui then
                 local touchControlField = touchGui:FindFirstChild("TouchControlFrame")
                 if touchControlField then
                     local jumpButton = touchControlField:FindFirstChild("JumpButton")
