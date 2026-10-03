@@ -884,7 +884,9 @@ EspTab:CreateToggle({
                 ChristmasCookie = "Christmas Cookie",
                 DandyEasterEggs = "Dandy Easter Eggs",
                 Pumpkin = "Pumpkins",
-                FakeCapsule = "Fake Capsule"
+                FakeCapsule = "Fake Capsule",
+                CollectablePiece = "Halloween Card",
+                TrickOrTreatDoor_Origin = "Halloween Door"
             }
 
             local cols = {
@@ -912,9 +914,11 @@ EspTab:CreateToggle({
                 ["Jumper Cable"] = Color3.fromRGB(148, 0, 211),
                 ["Stopwatch"] = Color3.fromRGB(255, 255, 255),
                 ["Christmas Cookie"] = Color3.fromRGB(255, 255, 0),
-                ["Dandy Easter Eggs"] = Color3.fromRGB(255, 255, 0),
+                ["DandyEasterEggs"] = Color3.fromRGB(255, 255, 0),
                 ["Pumpkins"] = Color3.fromRGB(255, 140, 0),
-                ["Fake Capsule"] = Color3.fromRGB(255, 255, 0)
+                ["Fake Capsule"] = Color3.fromRGB(255, 255, 0),
+                ["Halloween Card"] = Color3.fromRGB(255, 140, 0),
+                ["Halloween Door"] = Color3.fromRGB(255, 140, 0)
             }
 
             local function apply(obj)
@@ -938,7 +942,13 @@ EspTab:CreateToggle({
                 hi.Adornee = obj
                 hi.FillColor = itemColor
                 hi.FillTransparency = 0.5
-                hi.OutlineColor = itemColor
+
+                -- Customização do Outline das Highlights
+                if obj.Name == "CollectablePiece" or obj.Name == "TrickOrTreatDoor_Origin" then
+                    hi.OutlineColor = Color3.fromRGB(255, 255, 255)
+                else
+                    hi.OutlineColor = itemColor
+                end
                 hi.OutlineTransparency = 0
 
                 local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
@@ -962,13 +972,23 @@ EspTab:CreateToggle({
                     txt.Font = Enum.Font.FredokaOne
                     txt.TextStrokeTransparency = 0
 
-                    if obj.Name == "HolidayCollectibleItem" then
+                    -- Customização da cor do Stroke (Outline) das Nametags
+                    if obj.Name == "CollectablePiece" then
+                        txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                    elseif obj.Name == "TrickOrTreatDoor_Origin" then
+                        txt.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+                    else
+                        txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                    end
+
+                    -- Efeito Lerp de roxo para laranja no item Pumpkin
+                    if obj.Name == "Pumpkin" or obj.Name == "HolidayCollectibleItem" then
                         task.spawn(function()
                             local orange = Color3.fromRGB(255, 140, 0)
                             local purple = Color3.fromRGB(148, 0, 211)
                             while itemEspEnabled and obj and obj.Parent and hi and txt do
                                 local alpha = math.abs(((tick() / 2) % 2) - 1)
-                                local lerpedColor = orange:Lerp(purple, alpha)
+                                local lerpedColor = purple:Lerp(orange, alpha)
                                 hi.FillColor = lerpedColor
                                 hi.OutlineColor = lerpedColor
                                 txt.TextColor3 = lerpedColor
@@ -1448,35 +1468,6 @@ PlayerTab:CreateButton({
         end)
     end
 })
-
--- Anti Vee Popup Toggle
-local antiVeePopupEnabled = false
-PlayerTab:CreateToggle({
-    Name = "Anti Vee Popup",
-    CurrentValue = false,
-    Flag = "AntiVeePopupToggle",
-    Callback = function(v)
-        antiVeePopupEnabled = v
-    end
-})
-
-task.spawn(function()
-    while true do
-        if antiVeePopupEnabled then
-            pcall(function()
-                local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-                if playerGui then
-                    for _, gui in ipairs(playerGui:GetDescendants()) do
-                        if gui.Name == "PopUpFrame" or gui.Name:lower():find("veepopup") or gui.Name:lower():find("vee_popup") then
-                            gui.Visible = false
-                        end
-                    end
-                end
-            end)
-        end
-        task.wait(0.5)
-    end
-end)
 
 local noSlipperyEnabled = false
 local defaultPhysicalProperties = {}
