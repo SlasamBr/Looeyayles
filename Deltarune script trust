@@ -456,9 +456,12 @@ task.spawn(function()
 end)
 
 -- ==============================================================================
--- ESP TAB
+-- ESP TAB (ORGANIZADA EM SUBSEÇÕES)
 -- ==============================================================================
 local EspTab = Window:CreateTab("Esp", "eye")
+
+-- --- SUBSEÇÃO: TWISTED ESP ---
+EspTab:CreateSection("Twisteds ESP")
 
 local twistedEspEnabled = false
 local twistedDisableNametags = false
@@ -703,6 +706,9 @@ EspTab:CreateToggle({
     end
 })
 
+-- --- SUBSEÇÃO: PLAYER ESP ---
+EspTab:CreateSection("Player ESP")
+
 local playerEspEnabled = false
 local playerDisableNametags = false
 local activePlayerNametags = {}
@@ -846,6 +852,9 @@ EspTab:CreateToggle({
     end
 })
 
+-- --- SUBSEÇÃO: ITEM ESP ---
+EspTab:CreateSection("Item ESP")
+
 local itemEspEnabled = false
 local itemDisableNametags = false
 local activeItemNametags = {}
@@ -886,7 +895,10 @@ EspTab:CreateToggle({
                 Pumpkin = "Pumpkins",
                 FakeCapsule = "Fake Capsule",
                 CollectablePiece = "Halloween Card",
-                TrickOrTreatDoor_Origin = "Halloween Door"
+                TrickOrTreatDoor_Origin = "Halloween Door",
+                Ornament = "Ornament",
+                Basket = "Basket",
+                DandyCorn = "DandyCorn"
             }
 
             local cols = {
@@ -914,11 +926,11 @@ EspTab:CreateToggle({
                 ["Jumper Cable"] = Color3.fromRGB(148, 0, 211),
                 ["Stopwatch"] = Color3.fromRGB(255, 255, 255),
                 ["Christmas Cookie"] = Color3.fromRGB(255, 255, 0),
-                ["DandyEasterEggs"] = Color3.fromRGB(255, 255, 0),
+                ["Dandy Easter Eggs"] = Color3.fromRGB(255, 255, 0),
                 ["Pumpkins"] = Color3.fromRGB(255, 140, 0),
                 ["Fake Capsule"] = Color3.fromRGB(255, 255, 0),
                 ["Halloween Card"] = Color3.fromRGB(255, 140, 0),
-                ["Halloween Door"] = Color3.fromRGB(255, 140, 0)
+                ["DandyCorn"] = Color3.fromRGB(255, 255, 0)
             }
 
             local function apply(obj)
@@ -943,7 +955,6 @@ EspTab:CreateToggle({
                 hi.FillColor = itemColor
                 hi.FillTransparency = 0.5
 
-                -- Customização do Outline das Highlights
                 if obj.Name == "CollectablePiece" or obj.Name == "TrickOrTreatDoor_Origin" then
                     hi.OutlineColor = Color3.fromRGB(255, 255, 255)
                 else
@@ -972,7 +983,6 @@ EspTab:CreateToggle({
                     txt.Font = Enum.Font.FredokaOne
                     txt.TextStrokeTransparency = 0
 
-                    -- Customização da cor do Stroke (Outline) das Nametags
                     if obj.Name == "CollectablePiece" then
                         txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                     elseif obj.Name == "TrickOrTreatDoor_Origin" then
@@ -981,7 +991,6 @@ EspTab:CreateToggle({
                         txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                     end
 
-                    -- Efeito Lerp de roxo para laranja no item Pumpkin
                     if obj.Name == "Pumpkin" or obj.Name == "HolidayCollectibleItem" then
                         task.spawn(function()
                             local orange = Color3.fromRGB(255, 140, 0)
@@ -989,6 +998,32 @@ EspTab:CreateToggle({
                             while itemEspEnabled and obj and obj.Parent and hi and txt do
                                 local alpha = math.abs(((tick() / 2) % 2) - 1)
                                 local lerpedColor = purple:Lerp(orange, alpha)
+                                hi.FillColor = lerpedColor
+                                hi.OutlineColor = lerpedColor
+                                txt.TextColor3 = lerpedColor
+                                task.wait(0.1)
+                            end
+                        end)
+                    elseif obj.Name == "Ornament" then
+                        task.spawn(function()
+                            local red = Color3.fromRGB(255, 0, 0)
+                            local teal = Color3.fromRGB(0, 200, 200)
+                            while itemEspEnabled and obj and obj.Parent and hi and txt do
+                                local alpha = math.abs(((tick() / 2) % 2) - 1)
+                                local lerpedColor = red:Lerp(teal, alpha)
+                                hi.FillColor = lerpedColor
+                                hi.OutlineColor = lerpedColor
+                                txt.TextColor3 = lerpedColor
+                                task.wait(0.1)
+                            end
+                        end)
+                    elseif obj.Name == "Basket" then
+                        task.spawn(function()
+                            local pink = Color3.fromRGB(255, 105, 180)
+                            local paleYellow = Color3.fromRGB(255, 255, 180)
+                            while itemEspEnabled and obj and obj.Parent and hi and txt do
+                                local alpha = math.abs(((tick() / 2) % 2) - 1)
+                                local lerpedColor = pink:Lerp(paleYellow, alpha)
                                 hi.FillColor = lerpedColor
                                 hi.OutlineColor = lerpedColor
                                 txt.TextColor3 = lerpedColor
@@ -1036,6 +1071,9 @@ EspTab:CreateToggle({
         end
     end
 })
+
+-- --- SUBSEÇÃO: MACHINES, ELEVATORS & OBJECTS ESP ---
+EspTab:CreateSection("Machine ESP")
 
 local generatorEspEnabled = false
 local generatorConn = nil
@@ -1121,9 +1159,7 @@ EspTab:CreateToggle({
     end
 })
 
--- ==============================================================================
--- NOVOS ESPs (Ichor Puddles, Elevator, Fake Elevator)
--- ==============================================================================
+EspTab:CreateSection("Ichor Puddles ESP")
 
 local ichorEspEnabled = false
 local ichorDisableNametags = false
@@ -1148,7 +1184,7 @@ EspTab:CreateToggle({
                     highlight.Adornee = obj
                     highlight.FillColor = Color3.fromRGB(0, 0, 0)
                     highlight.FillTransparency = 0.5
-                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Outline branca
+                    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                     highlight.OutlineTransparency = 0
 
                     local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
@@ -1212,6 +1248,8 @@ EspTab:CreateToggle({
         end
     end
 })
+
+EspTab:CreateSection("Elevators ESP")
 
 local elevatorEspEnabled = false
 local elevatorDisableNametags = false
@@ -1945,7 +1983,7 @@ FunTab:CreateToggle({ Name = "Spin", CurrentValue = false, Callback = function(v
     end
 end })
 
-FunTab:CreateSlider({ Name = "Spin Speed", Range = {5, 100}, Increment = 1, CurrentValue = 25, Flag = "SpinSpeedFlag", Callback = function(v)
+FunTab:CreateSlider({ Name = "Spin Speed", Range = {1, 100}, Increment = 1, CurrentValue = 25, Flag = "SpinSpeedFlag", Callback = function(v)
     spinSpeed = v
 end })
 
@@ -1979,7 +2017,7 @@ FunTab:CreateToggle({
 
 FunTab:CreateSlider({
     Name = "FOV Value",
-    Range = {10, 200},
+    Range = {10, 120},
     Increment = 1,
     CurrentValue = 70,
     Flag = "FovSlider",
