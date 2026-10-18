@@ -1,5 +1,5 @@
 -- ==============================================================================
--- 🎈⭐🎪-Looey Circus Gui (Otimizado)-🎪⭐🎈
+-- 🎈⭐🎪-Looey Circus Gui (Otimizado & Seguro)-🎪⭐🎈
 -- ==============================================================================
 local Rayfield = nil
 local success, err = pcall(function()
@@ -18,7 +18,7 @@ if not success or not Rayfield then
 end
 
 local Window = Rayfield:CreateWindow({
-    Name = ":D ~ Looey's Circus Gui ~ :D",
+    Name = "Looey's Circus Gui",
     LoadingTitle = "Loading That FUCKASS Gui...",
     LoadingSubtitle = "BOIIIIIIIIIIIIIIIIIIIIIIIIIIIII",
     ConfigurationSaving = { Enabled = false, FolderName = "LooeyCircus", FileName = "Config" },
@@ -74,10 +74,12 @@ local function applyNoclip()
     for _, part in ipairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
             if getconnections then
-                for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanQuery"))) do pcall(function() conn:Disconnect() end) end
-                for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanCollide"))) do pcall(function() conn:Disconnect() end) end
-                for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanTouch"))) do pcall(function() conn:Disconnect() end) end
-                for _, conn in ipairs(getconnections(part.Changed)) do pcall(function() conn:Disconnect() end) end
+                pcall(function()
+                    for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanQuery"))) do conn:Disconnect() end
+                    for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanCollide"))) do conn:Disconnect() end
+                    for _, conn in ipairs(getconnections(part:GetPropertyChangedSignal("CanTouch"))) do conn:Disconnect() end
+                    for _, conn in ipairs(getconnections(part.Changed)) do conn:Disconnect() end
+                end)
             end
             part.CanCollide = false
         end
@@ -119,13 +121,9 @@ end
 -- MAIN TAB
 -- ==============================================================================
 local MainTab = Window:CreateTab("Main", "home")
-local speedValue, tpWalkEnabled, tpWalkSpeed = 16, false, 1
-local floatEnabled = false
-local floatHeight = 3.5
-local lockedFloatY = nil
-local floatConnection = nil
+local speedValue, tpWalkEnabled, tpWalkSpeed = 16, false, 0.1
 
-MainTab:CreateSlider({ Name = "Speed", Range = {16, 200}, Increment = 1, CurrentValue = 16, Flag = "PlayerSpeed", Callback = function(v) 
+MainTab:CreateSlider({ Name = "Speed", Range = {16, 30}, Increment = 1, CurrentValue = 16, Flag = "PlayerSpeed", Callback = function(v) 
     speedValue = v 
     if Humanoid then Humanoid.WalkSpeed = v end
 end })
@@ -140,53 +138,8 @@ MainTab:CreateToggle({
 })
 
 MainTab:CreateToggle({ Name = "Enable Tpwalk", CurrentValue = false, Flag = "TPWalkToggle", Callback = function(v) tpWalkEnabled = v end })
-MainTab:CreateSlider({ Name = "Tpwalk Speed", Range = {0.1, 5}, Increment = 0.1, CurrentValue = 1, Flag = "TPWalkSpeed", Callback = function(v) tpWalkSpeed = v end })
+MainTab:CreateSlider({ Name = "Tpwalk Speed", Range = {0.1, 0.3}, Increment = 0.05, CurrentValue = 0.1, Flag = "TPWalkSpeed", Callback = function(v) tpWalkSpeed = v end })
 
-MainTab:CreateToggle({ Name = "Float", CurrentValue = false, Flag = "FloatToggle", Callback = function(v)
-    floatEnabled = v
-    if floatEnabled then
-        if HumanoidRootPart then
-            local rayParams = RaycastParams.new()
-            rayParams.FilterDescendantsInstances = {Character}
-            rayParams.FilterType = Enum.RaycastFilterType.Exclude
-            local rayResult = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -1000, 0), rayParams)
-            
-            if rayResult then
-                lockedFloatY = rayResult.Position.Y + floatHeight
-            else
-                lockedFloatY = HumanoidRootPart.Position.Y
-            end
-        end
-
-        floatConnection = RunService.RenderStepped:Connect(function()
-            if Character and HumanoidRootPart and lockedFloatY then
-                HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPart.Position.X, lockedFloatY, HumanoidRootPart.Position.Z) * (HumanoidRootPart.CFrame - HumanoidRootPart.Position)
-                HumanoidRootPart.AssemblyLinearVelocity = Vector3.new(HumanoidRootPart.AssemblyLinearVelocity.X, 0, HumanoidRootPart.AssemblyLinearVelocity.Z)
-            end
-        end)
-    else
-        if floatConnection then
-            floatConnection:Disconnect()
-            floatConnection = nil
-        end
-        lockedFloatY = nil
-    end
-end })
-
-MainTab:CreateSlider({ Name = "Float Studs", Range = {1, 20}, Increment = 0.5, CurrentValue = 3.5, Flag = "FloatHeightSlider", Callback = function(v)
-    floatHeight = v
-    if floatEnabled and HumanoidRootPart then
-        local rayParams = RaycastParams.new()
-        rayParams.FilterDescendantsInstances = {Character}
-        rayParams.FilterType = Enum.RaycastFilterType.Exclude
-        local rayResult = workspace:Raycast(HumanoidRootPart.Position, Vector3.new(0, -1000, 0), rayParams)
-        if rayResult then
-            lockedFloatY = rayResult.Position.Y + floatHeight
-        end
-    end
-end })
-
-MainTab:CreateButton({ Name = "Fly", Callback = function() pcall(function() loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-The-best-fly-gui-246203"))() end) end })
 MainTab:CreateButton({ Name = "Destroy Gui", Callback = function() 
     toggleNoclip(false)
     Rayfield:Destroy() 
@@ -349,7 +302,7 @@ task.spawn(function()
                     local inv = char.Inventory
                     for i = 1, 3 do
                         local slot = inv:FindFirstChild("Slot" .. tostring(i))
-                        if slot then
+                        if slot and ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("ItemEvent") then
                             ReplicatedStorage.Events.ItemEvent:InvokeServer(char, slot)
                         end
                     end
@@ -374,7 +327,7 @@ task.spawn(function()
     while true do
         if autoAbilityEnabled then
             pcall(function()
-                if Character and HumanoidRootPart then
+                if Character and HumanoidRootPart and ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("AbilityEvent") then
                     ReplicatedStorage.Events.AbilityEvent:InvokeServer(Character, HumanoidRootPart.CFrame, false)
                 end
             end)
@@ -383,39 +336,14 @@ task.spawn(function()
     end
 end)
 
-local autoSquirmEnabled = false
-AutomationTab:CreateToggle({
+AutomationTab:CreateButton({
     Name = "Auto Escape Squirm",
-    CurrentValue = false,
-    Flag = "AutoEscapeSquirmToggle",
-    Callback = function(v)
-        autoSquirmEnabled = v
+    Callback = function()
+        pcall(function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/alihusam078588-web/Twilight-zone-loader/refs/heads/main/auto%20struggle.lua"))()
+        end)
     end
 })
-
-task.spawn(function()
-    pcall(function()
-        local remote = ReplicatedStorage:WaitForChild("Events"):WaitForChild("TwistedSquirmGrab")
-        local running = false
-        local dir = "left"
-
-        remote.OnClientEvent:Connect(function(action)
-            if autoSquirmEnabled then
-                running = (action == "GrabStart")
-            else
-                running = false
-            end
-        end)
-
-        while true do
-            task.wait(0.12)
-            if autoSquirmEnabled and running then
-                remote:FireServer("Struggle", dir)
-                dir = (dir == "left") and "right" or "left"
-            end
-        end
-    end)
-end)
 
 -- ==============================================================================
 -- ESP TAB
@@ -505,8 +433,8 @@ EspTab:CreateToggle({
 
             if LethalList[model.Name] then rarityText = " | Lethal" end
 
-            local displayName = BlotHandsList[model.Name] and "BlotHand" or model.Name:gsub("Monster", "")
-            textLabel.Text = displayName .. rarityText
+            local rawName = BlotHandsList[model.Name] and "BlotHand" or model.Name:gsub("Monster", "")
+            textLabel.Text = "Twisted " .. rawName .. rarityText
 
             table.insert(activeTwistedMonsters, billboard)
 
@@ -733,7 +661,7 @@ local itemMap = {
     Gumball = "Gumball", BonBon = "BonBon", Chocolate = "Chocolate", ChocolateBox = "Chocolate Box",
     Pop = "Pop", PopBottle = "Pop Bottle", JumperCable = "Jumper Cable", Stopwatch = "Stopwatch",
     ChristmasCookie = "Christmas Cookie", DandyEasterEggs = "Dandy Easter Eggs", Pumpkin = "Pumpkins",
-    FakeCapsule = "Fake Capsule", Ornament = "Ornament", Basket = "Basket", DandCorn = "DandyCorn"
+    FakeCapsule = "Fake Capsule", Ornament = "Ornament", Basket = "Basket", DandCorn = "DandCorn"
 }
 
 local cols = {
@@ -762,7 +690,20 @@ local function applyItemESP(obj)
     tagFolder.Parent = obj
 
     local formattedName = itemMap[obj.Name]
-    local itemColor = cols[formattedName] or Color3.fromRGB(255, 165, 0)
+    local monsterNameRaw = ""
+
+    if obj.Name == "ResearchCapsule" then
+        local promptFolder = obj:FindFirstChild("Prompt")
+        if promptFolder then
+            local monsterVal = promptFolder:FindFirstChild("Monster")
+            if monsterVal then
+                monsterNameRaw = tostring(monsterVal.Value):gsub("Monster", "")
+                formattedName = "Research Capsule | Twisted " .. monsterNameRaw
+            end
+        end
+    end
+
+    local itemColor = cols[itemMap[obj.Name]] or Color3.fromRGB(255, 165, 0)
 
     local hi = Instance.new("Highlight")
     hi.Name = "ItemChams"
@@ -796,37 +737,68 @@ local function applyItemESP(obj)
         txt.TextStrokeTransparency = 0
         txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
 
-        local c1, c2 = nil, nil
-        if obj.Name == "HealthKit" or obj.Name == "Bandage" then
-            c1 = Color3.fromRGB(255, 105, 180) -- Rosa
-            c2 = Color3.fromRGB(255, 0, 0)     -- Vermelho
-        elseif obj.Name == "ChocolateBox" or obj.Name == "BoxOfChocolates" then
-            c1 = Color3.fromRGB(0, 100, 0)     -- Verde Escuro
-            c2 = Color3.fromRGB(255, 255, 0)   -- Amarelo
-        elseif obj.Name == "Pop" or obj.Name == "PopBottle" or obj.Name == "BottleOfPop" then
-            c1 = Color3.fromRGB(255, 0, 0)     -- Vermelho
-            c2 = Color3.fromRGB(0, 100, 0)     -- Verde Escuro
-        elseif obj.Name == "SmokeBomb" then
-            c1 = Color3.fromRGB(148, 0, 211)   -- Roxo
-            c2 = Color3.fromRGB(135, 206, 250) -- Azul Claro
-        elseif obj.Name == "Pumpkin" or obj.Name == "HolidayCollectibleItem" or obj.Name == "Ornament" or obj.Name == "Basket" then
-            c1, c2 = Color3.fromRGB(255, 140, 0), Color3.fromRGB(148, 0, 211)
-            if obj.Name == "Ornament" then c1, c2 = Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 200, 200) end
-            if obj.Name == "Basket" then c1, c2 = Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 255, 180) end
-        end
+        local capsuleList1 = {["shelly"]=true, ["astro"]=true, ["vee"]=true, ["pebble"]=true, ["sprout"]=true}
+        local capsuleList2 = {["ribecca"]=true, ["gourdy"]=true, ["soulvester"]=true, ["eclipse"]=true}
+        local capsuleList3 = {["bobette"]=true, ["coal"]=true, ["ginger"]=true, ["rudie"]=true}
+        local capsuleList4 = {["bassie"]=true, ["cocoa"]=true, ["eggson"]=true, ["flyte"]=true}
+        local capsuleList5 = {["dandy"]=true, ["dyle"]=true}
 
-        if c1 and c2 then
-            task.spawn(function()
-                while itemEspEnabled and obj and obj.Parent and hi and txt do
-                    local alpha = math.abs(((tick() / 2) % 2) - 1)
-                    local lerpedColor = c1:Lerp(c2, alpha)
-                    hi.FillColor = lerpedColor
-                    hi.OutlineColor = lerpedColor
-                    txt.TextColor3 = lerpedColor
-                    task.wait(0.15)
+        local mLower = monsterNameRaw:lower()
+
+        task.spawn(function()
+            while itemEspEnabled and obj and obj.Parent and hi and txt do
+                local t = tick()
+                if capsuleList1[mLower] then
+                    local colorsSet = {Color3.fromRGB(148,0,211), Color3.fromRGB(135,206,250), Color3.fromRGB(255,255,0), Color3.fromRGB(255,165,0), Color3.fromRGB(255,0,0)}
+                    local idx = math.floor((t * 2) % #colorsSet) + 1
+                    local nextIdx = (idx % #colorsSet) + 1
+                    local alpha = (t * 2) % 1
+                    local lerped = colorsSet[idx]:Lerp(colorsSet[nextIdx], alpha)
+                    hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
+                elseif capsuleList2[mLower] then
+                    local c1, c2 = Color3.fromRGB(148,0,211), Color3.fromRGB(255,128,0)
+                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local lerped = c1:Lerp(c2, alpha)
+                    hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
+                elseif capsuleList3[mLower] then
+                    local c1, c2 = Color3.fromRGB(0,204,153), Color3.fromRGB(255,51,51)
+                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local lerped = c1:Lerp(c2, alpha)
+                    hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
+                elseif capsuleList4[mLower] then
+                    local c1, c2 = Color3.fromRGB(255,255,153), Color3.fromRGB(255,153,204)
+                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local lerped = c1:Lerp(c2, alpha)
+                    hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
+                elseif capsuleList5[mLower] then
+                    local c1, c2 = Color3.fromRGB(0,0,0), Color3.fromRGB(255,0,0)
+                    local alpha = math.abs(((t / 2) % 2) - 1)
+                    local lerped = c1:Lerp(c2, alpha)
+                    hi.FillColor = lerped; hi.OutlineColor = lerped; txt.TextColor3 = lerped
+                else
+                    local c1, c2 = nil, nil
+                    if obj.Name == "HealthKit" or obj.Name == "Bandage" then
+                        c1, c2 = Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 0, 0)
+                    elseif obj.Name == "ChocolateBox" or obj.Name == "BoxOfChocolates" then
+                        c1, c2 = Color3.fromRGB(0, 100, 0), Color3.fromRGB(255, 255, 0)
+                    elseif obj.Name == "Pop" or obj.Name == "PopBottle" or obj.Name == "BottleOfPop" then
+                        c1, c2 = Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 100, 0)
+                    elseif obj.Name == "SmokeBomb" then
+                        c1, c2 = Color3.fromRGB(148, 0, 211), Color3.fromRGB(135, 206, 250)
+                    elseif obj.Name == "Pumpkin" or obj.Name == "HolidayCollectibleItem" or obj.Name == "Ornament" or obj.Name == "Basket" then
+                        c1, c2 = Color3.fromRGB(255, 140, 0), Color3.fromRGB(148, 0, 211)
+                        if obj.Name == "Ornament" then c1, c2 = Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 200, 200) end
+                        if obj.Name == "Basket" then c1, c2 = Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 255, 180) end
+                    end
+                    if c1 and c2 then
+                        local alpha = math.abs(((t / 2) % 2) - 1)
+                        local lerpedColor = c1:Lerp(c2, alpha)
+                        hi.FillColor = lerpedColor; hi.OutlineColor = lerpedColor; txt.TextColor3 = lerpedColor
+                    end
                 end
-            end)
-        end
+                task.wait(0.15)
+            end
+        end)
     end
 end
 
@@ -1087,6 +1059,17 @@ EspTab:CreateSection("Machine ESP")
 local generatorEspEnabled = false
 local generatorConn = nil
 
+local function isMachineCompleted(model)
+    local stats = model:FindFirstChild("Stats") or (model.Parent and model.Parent:FindFirstChild("Stats"))
+    if stats then
+        local completed = stats:FindFirstChild("Completed")
+        if completed and completed.Value == true then
+            return true
+        end
+    end
+    return false
+end
+
 EspTab:CreateToggle({
     Name = "Machine Esp",
     CurrentValue = false,
@@ -1107,6 +1090,8 @@ EspTab:CreateToggle({
                 local isMachine = (nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("machine"))
                 if not isMachine then return end
 
+                if isMachineCompleted(model) then return end
+
                 local folder = Instance.new("Folder")
                 folder.Name = "CustomESP"
                 folder.Parent = model
@@ -1114,11 +1099,21 @@ EspTab:CreateToggle({
                 local highlight = Instance.new("Highlight")
                 highlight.Name = "Chams"
                 highlight.Adornee = model
-                highlight.FillColor = Color3.fromRGB(80, 80, 80) -- Preto mais claro e marcante
-                highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- Outline Branca
+                highlight.FillColor = Color3.fromRGB(80, 80, 80)
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                 highlight.FillTransparency = 0.4
                 highlight.OutlineTransparency = 0
                 highlight.Parent = folder
+
+                task.spawn(function()
+                    while generatorEspEnabled and model and model.Parent and folder and folder.Parent do
+                        if isMachineCompleted(model) then
+                            folder:Destroy()
+                            break
+                        end
+                        task.wait(0.5)
+                    end
+                end)
             end
 
             for _, obj in ipairs(workspace:GetDescendants()) do
@@ -1191,6 +1186,21 @@ local function applyIchor(obj)
             txt.Font = Enum.Font.FredokaOne
             txt.TextStrokeTransparency = 0
             txt.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+
+            if name == "FinnIchorPuddle" then
+                task.spawn(function()
+                    local c1 = Color3.fromRGB(135, 206, 250)
+                    local c2 = Color3.fromRGB(0, 0, 0)
+                    while ichorEspEnabled and obj and obj.Parent and highlight and txt do
+                        local alpha = math.abs(((tick() / 2) % 2) - 1)
+                        local lerped = c1:Lerp(c2, alpha)
+                        highlight.FillColor = lerped
+                        highlight.OutlineColor = lerped
+                        txt.TextColor3 = lerped
+                        task.wait(0.15)
+                    end
+                end)
+            end
         end
     end
 end
@@ -1423,11 +1433,13 @@ TeleportTab:CreateButton({ Name = "Teleport To Machine", Callback = function()
     }
     local generators = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
-        if not ignoredNames[obj.Name] then
+        if not ignoredNames[obj.Name] and obj:IsA("Model") then
             local nameLower = obj.Name:lower()
             if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") then
-                local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
-                if part then table.insert(generators, part) end
+                if not isMachineCompleted(obj) then
+                    local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                    if part then table.insert(generators, part) end
+                end
             end
         end
     end
@@ -1669,7 +1681,11 @@ MachineTab:CreateToggle({
 
 task.spawn(function()
     pcall(function()
-        local barnabymodule = require(ReplicatedStorage.SharedData.ArcadeGames.SwimmyBarnaby)
+        local sharedData = ReplicatedStorage:FindFirstChild("SharedData")
+        if not sharedData then return end
+        local arcadeGames = sharedData:FindFirstChild("ArcadeGames")
+        if not arcadeGames then return end
+        local barnabymodule = require(arcadeGames:WaitForChild("SwimmyBarnaby"))
         local pg = LocalPlayer:WaitForChild("PlayerGui")
 
         local function barnabify(session)
@@ -1690,7 +1706,7 @@ task.spawn(function()
             if session.Fish and type(session.Fish.Jump) == "function" then session.Fish.Jump = function() end end
 
             pcall(function()
-                local uisource = ReplicatedStorage.SharedData.ArcadeGames.SwimmyBarnaby.ClientUI
+                local uisource = arcadeGames.SwimmyBarnaby.ClientUI
                 local customui = uisource:Clone()
                 customui.Name = "end me"
                 if customui:IsA("ScreenGui") then customui.DisplayOrder = 999999999 end
@@ -1786,15 +1802,19 @@ end)
 task.spawn(function()
     getgenv().scinstant = false
     pcall(function()
-        local event = game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("SkillcheckUpdate")
-        local ogcb = getcallbackvalue(event, "OnClientInvoke")
-
-        if ogcb then
-            local hook
-            hook = hookfunction(ogcb, function(...)
-                if getgenv().scinstant then return "supercomplete" end
-                return hook(...)
-            end)
+        local events = game:GetService("ReplicatedStorage"):FindFirstChild("Events")
+        if events then
+            local event = events:FindFirstChild("SkillcheckUpdate")
+            if event and getcallbackvalue then
+                local ogcb = getcallbackvalue(event, "OnClientInvoke")
+                if ogcb then
+                    local hook
+                    hook = hookfunction(ogcb, function(...)
+                        if getgenv().scinstant then return "supercomplete" end
+                        return hook(...)
+                    end)
+                end
+            end
         end
     end)
 end)
@@ -1974,6 +1994,6 @@ end })
 
 FunTab:CreateButton({ Name = "YouTube Music", Callback = function()
     pcall(function()
-        loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-YouTube-Music-Player-V8-236600"))()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/zxcursedsocute/Youtube-Music-Player-Free/refs/heads/main/loader"))()
     end)
 end })
