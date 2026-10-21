@@ -49,19 +49,119 @@ if LocalPlayer.Character then
     updateCharVars(LocalPlayer.Character)
 end
 
+-- Lista de Monstros Twisteds para checagem de proximidade (30 studs)
+local TwistedMonsterNames = {
+    ["CosmoMonster"] = true, ["BoxtenMonster"] = true, ["YattaMonster"] = true, ["ShrimpoMonster"] = true,
+    ["RudieMonster"] = true, ["RibeccaMonster"] = true, ["EggsonMonster"] = true, ["LooeyMonster"] = true,
+    ["PoppyMonster"] = true, ["BrushaMonster"] = true, ["TishaMonster"] = true, ["FinnMonster"] = true,
+    ["BrightneyMonster"] = true, ["FlyteMonster"] = true, ["GingerMonster"] = true, ["SoulvesterMonster"] = true,
+    ["ToodlesMonster"] = true, ["GlistenMonster"] = true, ["GigiMonster"] = true, ["GoobMonster"] = true,
+    ["ScrapsMonster"] = true, ["CoalMonster"] = true, ["EclipseMonster"] = true, ["CocoaMonster"] = true,
+    ["FlutterMonster"] = true, ["ShellyMonster"] = true, ["PebbleMonster"] = true, ["VeeMonster"] = true,
+    ["AstroMonster"] = true, ["SproutMonster"] = true, ["BobetteMonster"] = true, ["BassieMonster"] = true,
+    ["DyleMonster"] = true, ["DandyMonster"] = true, ["GourdyMonster"] = true, ["TeaganMonster"] = true,
+    ["RodgerMonster"] = true, ["RazzleDazzleMonster"] = true, ["ConnieMonster"] = true, ["WaxwellMonster"] = true
+}
+
+local function isTwistedNearby(targetPos, maxDist)
+    maxDist = maxDist or 30
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and TwistedMonsterNames[obj.Name] then
+            local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+            if part and (part.Position - targetPos).Magnitude <= maxDist then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function isElevatorNearby(targetPos, maxDist)
+    maxDist = maxDist or 30
+    local elevatorsFolder = Workspace:FindFirstChild("Elevators")
+    if elevatorsFolder then
+        for _, obj in ipairs(elevatorsFolder:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("Model") then
+                local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or obj
+                if part and (part.Position - targetPos).Magnitude <= maxDist then
+                    return true
+                end
+            end
+        end
+    end
+    -- Verificar também por nome caso estejam soltos no workspace
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj.Name == "Elevator" or obj.Name == "ElevatorDoor" then
+            local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
+            if part and (part.Position - targetPos).Magnitude <= maxDist then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function canInteractWithPosition(pos)
+    if isElevatorNearby(pos, 30) then return false end
+    if isTwistedNearby(pos, 30) then return false end
+    return true
+end
+
 local function teleportTo(name, isExact)
-    if not Character or not HumanoidRootPart then return end
+    if not Character or not HumanoidRootPart then return false end
     for _, obj in ipairs(workspace:GetDescendants()) do
         local match = isExact and (obj.Name == name) or obj.Name:lower():find(name:lower())
         if match then
             local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
             if part then
+                local targetPos = part:IsA("Model") and part:GetPivot().Position or part.Position
+                if isTwistedNearby(targetPos, 30) then
+                    Rayfield:Notify({ Title = "Teleport", Content = "Twisted Nearby.", Duration = 2 })
+                    return false
+                end
                 HumanoidRootPart.CFrame = (part:IsA("Model") and part:GetPivot() or part.CFrame) + Vector3.new(0, 3, 0)
                 return true
             end
         end
     end
     return false
+end
+
+-- Função reutilizável para Teleport To Machine
+local function performTeleportToMachine()
+    if not Character or not HumanoidRootPart then return end
+    local ignoredNames = {
+        ["VendingMachine"] = true, ["Cooking_ExpressoMachine"] = true,
+        ["DanceMachine"] = true, ["Gachapon_Arcade_01"] = true,
+        ["Gachapon_Arcade_02"] = true, ["Gachapon_Arcade_03"] = true
+    }
+    local generators = {}
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if not ignoredNames[obj.Name] and obj:IsA("Model") then
+            local nameLower = obj.Name:lower()
+            if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") then
+                local stats = obj:FindFirstChild("Stats") or (obj.Parent and obj.Parent:FindFirstChild("Stats"))
+                local isCompleted = false
+                if stats then
+                    local completed = stats:FindFirstChild("Completed")
+                    if completed and completed.Value == true then isCompleted = true end
+                end
+
+                if not isCompleted then
+                    local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+                    if part and not isTwistedNearby(part.Position, 30) then 
+                        table.insert(generators, part) 
+                    end
+                end
+            end
+        end
+    end
+    if #generators > 0 then
+        local randomGen = generators[math.random(1, #generators)]
+        HumanoidRootPart.CFrame = randomGen.CFrame + Vector3.new(0, 3, 0)
+    else
+        Rayfield:Notify({ Title = "Teleport", Content = "Twisted Nearby.", Duration = 2 })
+    end
 end
 
 -- ==============================================================================
@@ -120,7 +220,7 @@ end
 -- ==============================================================================
 -- MAIN TAB
 -- ==============================================================================
-local MainTab = Window:CreateTab("Main", "home")
+local MainTab = Window:CreateTab("Main", 82594118269653)
 local speedValue, tpWalkEnabled, tpWalkSpeed = 16, false, 0.1
 
 MainTab:CreateSlider({ Name = "Speed", Range = {16, 30}, Increment = 1, CurrentValue = 16, Flag = "PlayerSpeed", Callback = function(v) 
@@ -140,11 +240,6 @@ MainTab:CreateToggle({
 MainTab:CreateToggle({ Name = "Enable Tpwalk", CurrentValue = false, Flag = "TPWalkToggle", Callback = function(v) tpWalkEnabled = v end })
 MainTab:CreateSlider({ Name = "Tpwalk Speed", Range = {0.1, 0.3}, Increment = 0.05, CurrentValue = 0.1, Flag = "TPWalkSpeed", Callback = function(v) tpWalkSpeed = v end })
 
-MainTab:CreateButton({ Name = "Destroy Gui", Callback = function() 
-    toggleNoclip(false)
-    Rayfield:Destroy() 
-end })
-
 RunService.RenderStepped:Connect(function(delta)
     if speedValue > 16 and Humanoid and Humanoid.WalkSpeed ~= speedValue then
         Humanoid.WalkSpeed = speedValue
@@ -157,7 +252,7 @@ end)
 -- ==============================================================================
 -- AUTOMATION TAB
 -- ==============================================================================
-local AutomationTab = Window:CreateTab("Automation", "cpu")
+local AutomationTab = Window:CreateTab("Automation", 71680025256265)
 
 AutomationTab:CreateButton({
     Name = "Autofarm",
@@ -201,87 +296,161 @@ task.spawn(function()
     end
 end)
 
+-- Método otimizado de Teletransporte rápido sem lag para coleta
+local function smartCollectItem(itemObj)
+    if not Character or not HumanoidRootPart then return false end
+    local targetPart = itemObj:IsA("BasePart") and itemObj or itemObj:FindFirstChildWhichIsA("BasePart", true)
+    local prompt = itemObj:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if not targetPart or not prompt then return false end
+
+    local targetPos = targetPart.Position
+    if not canInteractWithPosition(targetPos) then return false end
+
+    local originalPosition = HumanoidRootPart.CFrame
+    local startTime = tick()
+    local collected = false
+
+    while tick() - startTime < 5 do
+        if not Character or not HumanoidRootPart then break end
+        HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
+        pcall(function() fireproximityprompt(prompt) end)
+        
+        -- Verificar se o item ainda existe/está ativo
+        if not itemObj.Parent then
+            collected = true
+            break
+        end
+        task.wait(0.1)
+    end
+
+    if HumanoidRootPart then
+        HumanoidRootPart.CFrame = originalPosition
+    end
+    return collected
+end
+
+-- Estados dos Auto Pick Ups
+local autoExtractActive = false
+local autoHealsActive = false
 local autoCollectActive = false
+local autoCollectEventActive = false
+
+AutomationTab:CreateToggle({
+    Name = "Auto Pick Up Extraction Items",
+    CurrentValue = false,
+    Flag = "AutoPickUpExtractionItemsToggle",
+    Callback = function(v) autoExtractActive = v end
+})
+
+AutomationTab:CreateToggle({
+    Name = "Auto Pick Up Heals",
+    CurrentValue = false,
+    Flag = "AutoPickUpHealsToggle",
+    Callback = function(v) autoHealsActive = v end
+})
+
 AutomationTab:CreateToggle({
     Name = "Auto Collect Research Capsules",
     CurrentValue = false,
     Flag = "AutoCollectResearchCapsulesToggle",
-    Callback = function(v)
-        autoCollectActive = v
-        if autoCollectActive then
-            task.spawn(function()
-                while autoCollectActive do
-                    if Character and HumanoidRootPart then
-                        local capsules = {}
-                        for _, obj in ipairs(Workspace:GetDescendants()) do
-                            if obj.Name == "ResearchCapsule" then
-                                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                                local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                if targetPart and prompt then
-                                    table.insert(capsules, {Part = targetPart, Prompt = prompt})
-                                end
-                            end
-                        end
-
-                        if #capsules > 0 then
-                            local originalPosition = HumanoidRootPart.CFrame
-                            for _, cap in ipairs(capsules) do
-                                if not autoCollectActive then break end
-                                HumanoidRootPart.CFrame = cap.Part.CFrame + Vector3.new(0, 3, 0)
-                                task.wait(0.3)
-                                pcall(function() fireproximityprompt(cap.Prompt) end)
-                                task.wait(0.4)
-                            end
-                            if HumanoidRootPart then HumanoidRootPart.CFrame = originalPosition end
-                        end
-                    end
-                    task.wait(1.5)
-                end
-            end)
-        end
-    end
+    Callback = function(v) autoCollectActive = v end
 })
 
-local autoCollectEventActive = false
 AutomationTab:CreateToggle({
     Name = "Auto Collect Event Currency",
     CurrentValue = false,
     Flag = "AutoCollectEventCurrencyToggle",
-    Callback = function(v)
-        autoCollectEventActive = v
-        if autoCollectEventActive then
-            task.spawn(function()
-                while autoCollectEventActive do
-                    if Character and HumanoidRootPart then
-                        local eventItems = {}
+    Callback = function(v) autoCollectEventActive = v end
+})
+
+-- Loop principal sequencial ordenado por etapas para os Auto Pick Ups com verificação de Inventário Cheio
+task.spawn(function()
+    local extractionNames = {["ExtractionSpeedCandy"]=true, ["Instructions"]=true, ["BonBon"]=true, ["Jawbreaker"]=true, ["JumperCable"]=true}
+    local healNames = {["Bandage"]=true, ["HealthKit"]=true}
+
+    local function isInventoryFull()
+        local char = LocalPlayer.Character
+        if not char then return false end
+        local inv = char:FindFirstChild("Inventory")
+        if not inv then return false end
+
+        for i = 1, 3 do
+            local slot = inv:FindFirstChild("Slot" .. tostring(i))
+            if not slot or slot.Value == nil or slot.Value == "" or slot.Value == "None" then
+                return false
+            end
+        end
+        return true
+    end
+
+    while true do
+        task.wait(1)
+        if Character and HumanoidRootPart then
+            -- Se o inventário NÃO estiver cheio, executa a coleta de curas e extrações[span_1](start_span)[span_1](end_span)
+            if not isInventoryFull() then
+                -- 1. Primeiro: Extraction Items
+                if autoExtractActive then
+                    pcall(function()
                         for _, obj in ipairs(Workspace:GetDescendants()) do
-                            if obj.Name == "Pumpkin" then
-                                local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                                local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
-                                if targetPart and prompt then
-                                    table.insert(eventItems, {Part = targetPart, Prompt = prompt})
+                            if not autoExtractActive or isInventoryFull() then break end
+                            if extractionNames[obj.Name] then
+                                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                                if part and canInteractWithPosition(part.Position) then
+                                    smartCollectItem(obj)
                                 end
                             end
                         end
+                    end)
+                end
 
-                        if #eventItems > 0 then
-                            local originalPosition = HumanoidRootPart.CFrame
-                            for _, item in ipairs(eventItems) do
-                                if not autoCollectEventActive then break end
-                                HumanoidRootPart.CFrame = item.Part.CFrame + Vector3.new(0, 3, 0)
-                                task.wait(0.3)
-                                pcall(function() fireproximityprompt(item.Prompt) end)
-                                task.wait(0.4)
+                -- 2. Segundo: Pick Up Heals
+                if autoHealsActive then
+                    pcall(function()
+                        for _, obj in ipairs(Workspace:GetDescendants()) do
+                            if not autoHealsActive or isInventoryFull() then break end
+                            if healNames[obj.Name] then
+                                local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                                if part and canInteractWithPosition(part.Position) then
+                                    smartCollectItem(obj)
+                                end
                             end
-                            if HumanoidRootPart then HumanoidRootPart.CFrame = originalPosition end
+                        end
+                    end)
+                end
+            end
+
+            -- 3. Terceiro: Research Capsules
+            if autoCollectActive then
+                pcall(function()
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not autoCollectActive then break end
+                        if obj.Name == "ResearchCapsule" then
+                            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                            if part and canInteractWithPosition(part.Position) then
+                                smartCollectItem(obj)
+                            end
                         end
                     end
-                    task.wait(1.5)
-                end
-            end)
+                end)
+            end
+
+            -- 4. Quarto: Event Currency
+            if autoCollectEventActive then
+                pcall(function()
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if not autoCollectEventActive then break end
+                        if obj.Name == "Pumpkin" then
+                            local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
+                            if part and canInteractWithPosition(part.Position) then
+                                smartCollectItem(obj)
+                            end
+                        end
+                    end
+                end)
+            end
         end
     end
-})
+end)
 
 local autoUseItemsEnabled = false
 AutomationTab:CreateToggle({
@@ -325,7 +494,7 @@ AutomationTab:CreateToggle({
 
 task.spawn(function()
     while true do
-        if autoAbilityEnabled then
+          if autoAbilityEnabled then
             pcall(function()
                 if Character and HumanoidRootPart and ReplicatedStorage:FindFirstChild("Events") and ReplicatedStorage.Events:FindFirstChild("AbilityEvent") then
                     ReplicatedStorage.Events.AbilityEvent:InvokeServer(Character, HumanoidRootPart.CFrame, false)
@@ -348,7 +517,7 @@ AutomationTab:CreateButton({
 -- ==============================================================================
 -- ESP TAB
 -- ==============================================================================
-local EspTab = Window:CreateTab("Esp", "eye")
+local EspTab = Window:CreateTab("Esp", 130098091866021)
 
 -- --- SUBSEÇÃO: TWISTED ESP ---
 EspTab:CreateSection("Twisteds ESP")
@@ -674,7 +843,7 @@ local cols = {
     ["Stamina Candy"] = Color3.fromRGB(0, 100, 0), ["Stealth Candy"] = Color3.fromRGB(135, 206, 250),
     ["Speed Candy"] = Color3.fromRGB(255, 255, 0), ["Gumball"] = Color3.fromRGB(135, 206, 250),
     ["Bon Bon"] = Color3.fromRGB(255, 182, 193), ["Chocolate"] = Color3.fromRGB(255, 255, 0),
-    ["Chocolate Box"] = Color3.fromRGB(255, 255, 0), ["Pop"] = Color3.fromRGB(255, 0, 0),
+    ["Chocolate Box"] = Color3.fromRGB(255, 255, 0), ["Pop"] = Color3.fromRGB(0, 100, 0),
     ["Pop Bottle"] = Color3.fromRGB(255, 0, 0), ["Jumper Cable"] = Color3.fromRGB(148, 0, 211),
     ["Stopwatch"] = Color3.fromRGB(255, 255, 255), ["Christmas Cookie"] = Color3.fromRGB(255, 255, 0),
     ["Dandy Easter Eggs"] = Color3.fromRGB(255, 255, 0), ["Pumpkins"] = Color3.fromRGB(255, 140, 0),
@@ -781,7 +950,7 @@ local function applyItemESP(obj)
                         c1, c2 = Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 0, 0)
                     elseif obj.Name == "ChocolateBox" or obj.Name == "BoxOfChocolates" then
                         c1, c2 = Color3.fromRGB(0, 100, 0), Color3.fromRGB(255, 255, 0)
-                    elseif obj.Name == "Pop" or obj.Name == "PopBottle" or obj.Name == "BottleOfPop" then
+                    elseif obj.Name == "PopBottle" or obj.Name == "BottleOfPop" then
                         c1, c2 = Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 100, 0)
                     elseif obj.Name == "SmokeBomb" then
                         c1, c2 = Color3.fromRGB(148, 0, 211), Color3.fromRGB(135, 206, 250)
@@ -1053,10 +1222,11 @@ EspTab:CreateToggle({
     end
 })
 
--- --- SUBSEÇÃO: MACHINES, ELEVATORS & OBJECTS ESP ---
 EspTab:CreateSection("Machine ESP")
 
 local generatorEspEnabled = false
+local generatorDisableNametags = false
+local activeGeneratorNametags = {}
 local generatorConn = nil
 
 local function isMachineCompleted(model)
@@ -1084,7 +1254,7 @@ EspTab:CreateToggle({
             }
 
             local function applyESP(model)
-                if not model or not model:IsA("Model") or ignoredNames[model.Name] or model:FindFirstChild("CustomESP") then return end
+                if not model or not model:IsA("Model") or ignoredNames[model.Name] or model.Name == "BaseMachine" or model:FindFirstChild("CustomESP") then return end
                 
                 local nameLower = model.Name:lower()
                 local isMachine = (nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("machine"))
@@ -1105,15 +1275,62 @@ EspTab:CreateToggle({
                 highlight.OutlineTransparency = 0
                 highlight.Parent = folder
 
-                task.spawn(function()
-                    while generatorEspEnabled and model and model.Parent and folder and folder.Parent do
-                        if isMachineCompleted(model) then
-                            folder:Destroy()
-                            break
+                local part = model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+                if part then
+                    local billboard = Instance.new("BillboardGui")
+                    billboard.Name = "Nametag"
+                    billboard.Adornee = part
+                    billboard.Size = UDim2.new(0, 200, 0, 50)
+                    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+                    billboard.AlwaysOnTop = true
+                    billboard.Enabled = not generatorDisableNametags
+                    billboard.Parent = folder
+
+                    table.insert(activeGeneratorNametags, billboard)
+
+                    local textLabel = Instance.new("TextLabel", billboard)
+                    textLabel.Size = UDim2.new(1, 0, 1, 0)
+                    textLabel.BackgroundTransparency = 1
+                    textLabel.Text = "Machine | 0/0"
+                    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    textLabel.TextSize = 9
+                    textLabel.Font = Enum.Font.FredokaOne
+                    textLabel.TextStrokeTransparency = 0
+                    textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+
+                    task.spawn(function()
+                        while generatorEspEnabled and model and model.Parent and folder and folder.Parent do
+                            if model.Name == "BaseMachine" or isMachineCompleted(model) then
+                                folder:Destroy()
+                                break
+                            end
+
+                            local requiredVal = model:FindFirstChild("RequiredAmount", true)
+                            local currentVal = model:FindFirstChild("CurrentAmount", true)
+                            local connieVal = model:FindFirstChild("Connie", true)
+
+                            local reqAmt = requiredVal and requiredVal.Value or 0
+                            local curAmt = currentVal and currentVal.Value or 0
+
+                            -- Simplifica número do CurrentAmount (ex: 32.9 -> 32)
+                            local simpleCurAmt = math.floor(tonumber(curAmt) or 0)
+
+                            if connieVal and connieVal.Value == true then
+                                highlight.FillColor = Color3.fromRGB(135, 206, 250)
+                                highlight.OutlineColor = Color3.fromRGB(135, 206, 250)
+                                textLabel.TextColor3 = Color3.fromRGB(135, 206, 250)
+                                textLabel.Text = "Possesed Machine"
+                            else
+                                highlight.FillColor = Color3.fromRGB(80, 80, 80)
+                                highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                textLabel.Text = "Machine | " .. tostring(simpleCurAmt) .. "/" .. tostring(reqAmt)
+                            end
+
+                            task.wait(0.2)
                         end
-                        task.wait(0.5)
-                    end
-                end)
+                    end)
+                end
             end
 
             for _, obj in ipairs(workspace:GetDescendants()) do
@@ -1124,7 +1341,12 @@ EspTab:CreateToggle({
                 generatorConn = workspace.DescendantAdded:Connect(function(obj)
                     if generatorEspEnabled and obj:IsA("Model") then
                         task.wait(0.1)
-                        applyESP(obj)
+                        if obj.Name == "BaseMachine" then
+                            local custom = obj:FindFirstChild("CustomESP")
+                            if custom then custom:Destroy() end
+                        else
+                            applyESP(obj)
+                        end
                     end
                 end)
             end
@@ -1133,12 +1355,25 @@ EspTab:CreateToggle({
                 generatorConn:Disconnect()
                 generatorConn = nil
             end
+            activeGeneratorNametags = {}
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if obj:IsA("Model") then
                     local custom = obj:FindFirstChild("CustomESP")
                     if custom then custom:Destroy() end
                 end
             end
+        end
+    end
+})
+
+EspTab:CreateToggle({
+    Name = "Disable Machine Esp Nametags",
+    CurrentValue = false,
+    Flag = "GeneratorDisableNametagsToggle",
+    Callback = function(v)
+        generatorDisableNametags = v
+        for _, tag in ipairs(activeGeneratorNametags) do
+            if tag and tag.Parent then tag.Enabled = not generatorDisableNametags end
         end
     end
 })
@@ -1421,33 +1656,104 @@ EspTab:CreateToggle({
 -- ==============================================================================
 -- TELEPORT TAB
 -- ==============================================================================
-local TeleportTab = Window:CreateTab("Teleport", "navigation")
-TeleportTab:CreateButton({ Name = "Teleport To Elevator", Callback = function() teleportTo("elevator", false) end })
+local TeleportTab = Window:CreateTab("Teleport", 122323156868835)
 
-TeleportTab:CreateButton({ Name = "Teleport To Machine", Callback = function()
+TeleportTab:CreateButton({ Name = "Teleport To Elevator", Callback = function() 
     if not Character or not HumanoidRootPart then return end
-    local ignoredNames = {
-        ["VendingMachine"] = true, ["Cooking_ExpressoMachine"] = true,
-        ["DanceMachine"] = true, ["Gachapon_Arcade_01"] = true,
-        ["Gachapon_Arcade_02"] = true, ["Gachapon_Arcade_03"] = true
-    }
-    local generators = {}
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if not ignoredNames[obj.Name] and obj:IsA("Model") then
-            local nameLower = obj.Name:lower()
-            if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") then
-                if not isMachineCompleted(obj) then
-                    local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                    if part then table.insert(generators, part) end
-                end
+    local elevatorsFolder = Workspace:FindFirstChild("Elevators")
+    local targetPos = nil
+    if elevatorsFolder then
+        local elevator = elevatorsFolder:FindFirstChild("Elevator") or elevatorsFolder:FindFirstChildOfClass("Model")
+        if elevator then
+            local part = elevator.PrimaryPart or elevator:FindFirstChildWhichIsA("BasePart", true)
+            if part then targetPos = part.Position end
+        end
+    end
+    if not targetPos then
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if obj.Name == "Elevator" or obj.Name == "ElevatorDoor" then
+                local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
+                if part then targetPos = part.Position; break end
             end
         end
     end
-    if #generators > 0 then
-        local randomGen = generators[math.random(1, #generators)]
-        HumanoidRootPart.CFrame = randomGen.CFrame + Vector3.new(0, 3, 0)
+    if targetPos then
+        if isTwistedNearby(targetPos, 30) then
+            Rayfield:Notify({ Title = "Teleport", Content = "Twisted Nearby.", Duration = 2 })
+            return
+        end
+        HumanoidRootPart.CFrame = CFrame.new(targetPos) + Vector3.new(0, 3, 0)
+    else
+        teleportTo("elevator", false)
     end
 end })
+
+TeleportTab:CreateButton({ 
+    Name = "Teleport To Machine", 
+    Callback = function()
+        performTeleportToMachine()
+    end 
+})
+
+-- Botão Flutuante (ScreenGui) para o Teleport To Machine Button
+local screenGuiButton = nil
+
+TeleportTab:CreateToggle({
+    Name = "Teleport To Machine Button",
+    CurrentValue = false,
+    Flag = "TpMachineButtonToggle",
+    Callback = function(v)
+        if v then
+            if not screenGuiButton then
+                local sg = Instance.new("ScreenGui")
+                sg.Name = "TpMachineButtonGui"
+                sg.ResetOnSpawn = false
+
+                -- Tenta anexar ao CoreGui, senão usa PlayerGui
+                local parentGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+                pcall(function()
+                    if gethui then
+                        parentGui = gethui()
+                    elseif game:GetService("CoreGui") then
+                        parentGui = game:GetService("CoreGui")
+                    end
+                end)
+                sg.Parent = parentGui
+
+                local imgButton = Instance.new("ImageButton")
+                imgButton.Name = "TpMachineBtn"
+                imgButton.Size = UDim2.new(0, 65, 0, 65) -- Tamanho pequeno e discreto
+                imgButton.Position = UDim2.new(0.85, 0, 0.5, 0)
+                imgButton.BackgroundTransparency = 1
+                imgButton.Image = "rbxassetid://123753414381011"
+                imgButton.ScaleType = Enum.ScaleType.Fit
+                imgButton.Active = true
+                imgButton.Draggable = true -- Permite arrastar o botão pela tela
+                imgButton.Parent = sg
+
+                -- Efeito visual ao clicar no botão
+                imgButton.MouseButton1Down:Connect(function()
+                    imgButton.Size = UDim2.new(0, 58, 0, 58)
+                end)
+
+                imgButton.MouseButton1Up:Connect(function()
+                    imgButton.Size = UDim2.new(0, 65, 0, 65)
+                end)
+
+                imgButton.MouseButton1Click:Connect(function()
+                    performTeleportToMachine()
+                end)
+
+                screenGuiButton = sg
+            end
+        else
+            if screenGuiButton then
+                screenGuiButton:Destroy()
+                screenGuiButton = nil
+            end
+        end
+    end
+})
 
 TeleportTab:CreateSection("Items Teleport")
 local itemsList = {"AirHorn", "SmokeBomb", "ResearchCapsule", "ProteinBar", "Jawbreaker", "EjectButton", "HealthKit", "Bandage", "Tape", "Instructions", "ExtractionSpeedCandy", "SkillCheckCandy", "StaminaCandy", "StealthCandy", "SpeedCandy", "Gumball", "BonBon", "Chocolate", "ChocolateBox", "Pop", "PopBottle", "JumperCable", "Stopwatch", "ChristmasCookie", "DandyEasterEggs", "Pumpkin", "FakeCapsule"}
@@ -1458,7 +1764,7 @@ TeleportTab:CreateButton({ Name = "Teleport to Selected Item", Callback = functi
 -- ==============================================================================
 -- PLAYER TAB
 -- ==============================================================================
-local PlayerTab = Window:CreateTab("Player", "user")
+local PlayerTab = Window:CreateTab("Player", 73824491911988)
 
 PlayerTab:CreateButton({
     Name = "Anti Lag",
@@ -1580,16 +1886,36 @@ task.spawn(function()
                 for _, obj in ipairs(workspace:GetDescendants()) do
                     if obj:IsA("ProximityPrompt") then
                         local parentPart = obj.Parent
-                        if parentPart and parentPart:IsA("BasePart") then
-                            if (parentPart.Position - HumanoidRootPart.Position).Magnitude <= (obj.MaxActivationDistance or 15) then
-                                fireproximityprompt(obj)
+                        if parentPart then
+                            local promptPos = parentPart:IsA("BasePart") and parentPart.Position or (parentPart:IsA("Model") and (parentPart.PrimaryPart and parentPart.PrimaryPart.Position or parentPart:GetPivot().Position))
+                            if promptPos then
+                                -- Checa se está perto do jogador
+                                if (promptPos - HumanoidRootPart.Position).Magnitude <= (obj.MaxActivationDistance or 15) then
+                                    -- Checa se NÃO está dentro/próximo de GourdyMonster ou FakeCapsule
+                                    local isForbidden = false
+                                    local currentAncestor = parentPart
+                                    while currentAncestor and currentAncestor ~= workspace do
+                                        if currentAncestor.Name == "GourdyMonster" or currentAncestor.Name == "FakeCapsule" then
+                                            isForbidden = true
+                                            break
+                                        end
+                                        currentAncestor = currentAncestor.Parent
+                                    end
+
+                                    -- Checa se NÃO está próximo de um Elevator (15 studs)
+                                    local isNearElevator = isElevatorNearby(promptPos, 15)
+
+                                    if not isForbidden and not isNearElevator and canInteractWithPosition(promptPos) then
+                                        fireproximityprompt(obj)
+                                    end
+                                end
                             end
                         end
                     end
                 end
             end)
         end
-        task.wait(0.4)
+        task.wait(0.1) -- Loop rápido para ativação instantânea do prompt
     end
 end)
 
@@ -1627,7 +1953,7 @@ PlayerTab:CreateButton({
 -- ==============================================================================
 -- MACHINE TAB
 -- ==============================================================================
-local MachineTab = Window:CreateTab("Machine", "cpu")
+local MachineTab = Window:CreateTab("Machine", 120555476154580)
 MachineTab:CreateToggle({ Name = "Instant Skillcheck", CurrentValue = false, Flag = "InstantSkillcheck", Callback = function(v) getgenv().scinstant = v end })
 
 local instantStashGigiEnabled = false
@@ -1822,7 +2148,7 @@ end)
 -- ==============================================================================
 -- MAP TAB
 -- ==============================================================================
-local MapTab = Window:CreateTab("Map", "map")
+local MapTab = Window:CreateTab("Map", 113248535106613)
 
 local altFbConn = nil
 MapTab:CreateToggle({
@@ -1865,7 +2191,7 @@ MapTab:CreateToggle({
 -- ==============================================================================
 -- FUN TAB
 -- ==============================================================================
-local FunTab = Window:CreateTab("Fun", "smile")
+local FunTab = Window:CreateTab("Fun", 71680025256265)
 
 local spinning = false
 local spinSpeed = 25
