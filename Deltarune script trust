@@ -1,5 +1,5 @@
 -- ==============================================================================
--- 🎈⭐🎪-Looey Circus Gui (Otimizado & Seguro)-🎪⭐🎈
+-- 🎈⭐🎪-Looey Circus Gui (Otimizado & Seguro - Atualizado)-🎪⭐🎈
 -- ==============================================================================
 local Rayfield = nil
 local success, err = pcall(function()
@@ -89,7 +89,6 @@ local function isElevatorNearby(targetPos, maxDist)
             end
         end
     end
-    -- Verificar também por nome caso estejam soltos no workspace
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj.Name == "Elevator" or obj.Name == "ElevatorDoor" then
             local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
@@ -127,7 +126,6 @@ local function teleportTo(name, isExact)
     return false
 end
 
--- Função reutilizável para Teleport To Machine
 local function performTeleportToMachine()
     if not Character or not HumanoidRootPart then return end
     local ignoredNames = {
@@ -139,7 +137,7 @@ local function performTeleportToMachine()
     for _, obj in ipairs(workspace:GetDescendants()) do
         if not ignoredNames[obj.Name] and obj:IsA("Model") then
             local nameLower = obj.Name:lower()
-            if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") then
+            if nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("dualgen") or nameLower:find("trickortreatgen") then
                 local stats = obj:FindFirstChild("Stats") or (obj.Parent and obj.Parent:FindFirstChild("Stats"))
                 local isCompleted = false
                 if stats then
@@ -296,7 +294,6 @@ task.spawn(function()
     end
 end)
 
--- Método otimizado de Teletransporte rápido sem lag para coleta
 local function smartCollectItem(itemObj)
     if not Character or not HumanoidRootPart then return false end
     local targetPart = itemObj:IsA("BasePart") and itemObj or itemObj:FindFirstChildWhichIsA("BasePart", true)
@@ -315,7 +312,6 @@ local function smartCollectItem(itemObj)
         HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
         pcall(function() fireproximityprompt(prompt) end)
         
-        -- Verificar se o item ainda existe/está ativo
         if not itemObj.Parent then
             collected = true
             break
@@ -329,7 +325,6 @@ local function smartCollectItem(itemObj)
     return collected
 end
 
--- Estados dos Auto Pick Ups
 local autoExtractActive = false
 local autoHealsActive = false
 local autoCollectActive = false
@@ -363,7 +358,6 @@ AutomationTab:CreateToggle({
     Callback = function(v) autoCollectEventActive = v end
 })
 
--- Loop principal sequencial ordenado por etapas para os Auto Pick Ups com verificação de Inventário Cheio
 task.spawn(function()
     local extractionNames = {["ExtractionSpeedCandy"]=true, ["Instructions"]=true, ["BonBon"]=true, ["Jawbreaker"]=true, ["JumperCable"]=true}
     local healNames = {["Bandage"]=true, ["HealthKit"]=true}
@@ -386,9 +380,7 @@ task.spawn(function()
     while true do
         task.wait(1)
         if Character and HumanoidRootPart then
-            -- Se o inventário NÃO estiver cheio, executa a coleta de curas e extrações[span_1](start_span)[span_1](end_span)
             if not isInventoryFull() then
-                -- 1. Primeiro: Extraction Items
                 if autoExtractActive then
                     pcall(function()
                         for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -403,7 +395,6 @@ task.spawn(function()
                     end)
                 end
 
-                -- 2. Segundo: Pick Up Heals
                 if autoHealsActive then
                     pcall(function()
                         for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -419,7 +410,6 @@ task.spawn(function()
                 end
             end
 
-            -- 3. Terceiro: Research Capsules
             if autoCollectActive then
                 pcall(function()
                     for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -434,7 +424,6 @@ task.spawn(function()
                 end)
             end
 
-            -- 4. Quarto: Event Currency
             if autoCollectEventActive then
                 pcall(function()
                     for _, obj in ipairs(Workspace:GetDescendants()) do
@@ -519,7 +508,6 @@ AutomationTab:CreateButton({
 -- ==============================================================================
 local EspTab = Window:CreateTab("Esp", 130098091866021)
 
--- --- SUBSEÇÃO: TWISTED ESP ---
 EspTab:CreateSection("Twisteds ESP")
 
 local twistedEspEnabled = false
@@ -683,7 +671,6 @@ EspTab:CreateToggle({
     end
 })
 
--- --- SUBSEÇÃO: PLAYER ESP ---
 EspTab:CreateSection("Player ESP")
 
 local playerEspEnabled = false
@@ -813,7 +800,6 @@ EspTab:CreateToggle({
     end
 })
 
--- --- SUBSEÇÃO: ITEM ESP ---
 EspTab:CreateSection("Item ESP")
 
 local itemEspEnabled = false
@@ -852,6 +838,20 @@ local cols = {
 
 local function applyItemESP(obj)
     if not obj or not itemMap[obj.Name] then return end
+    
+    -- Se for o item Tape, verificar obrigatoriamente se possui um ProximityPrompt dentro do arquivo/modelo
+    if obj.Name == "Tape" then
+        local hasPrompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+        if not hasPrompt then return end
+        
+        -- Caso o item Tape tenha outro troço chamado "Tape" ou nametag dentro dele, removemos apenas a nametag interna com o mesmo nome
+        for _, descendant in ipairs(obj:GetDescendants()) do
+            if descendant.Name == "Tape" and (descendant:IsA("BillboardGui") or descendant:IsA("SurfaceGui") or descendant:IsA("TextLabel")) then
+                descendant:Destroy()
+            end
+        end
+    end
+
     if obj:FindFirstChild("ESP_Added") then return end
 
     local tagFolder = Instance.new("Folder")
@@ -1017,7 +1017,6 @@ EspTab:CreateToggle({
     end
 })
 
--- --- SUBSEÇÃO: HALLOWEEN EVENT ESP ---
 EspTab:CreateSection("Halloween Event ESP")
 
 local halloweenCardsEspEnabled = false
@@ -1254,10 +1253,11 @@ EspTab:CreateToggle({
             }
 
             local function applyESP(model)
-                if not model or not model:IsA("Model") or ignoredNames[model.Name] or model.Name == "BaseMachine" or model:FindFirstChild("CustomESP") then return end
+                if not model or not model:IsA("Model") or ignoredNames[model.Name] or model.Name == "BaseMachine" or model.Name == "BaseMachine_Mirror" or model:FindFirstChild("CustomESP") then return end
                 
                 local nameLower = model.Name:lower()
-                local isMachine = (nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("machine"))
+                -- Adicionado suporte a "trickortreatgen" com verificação de nomes parecidos
+                local isMachine = (nameLower == "generator" or nameLower == "generators" or nameLower:find("generator") or nameLower:find("dual_generator") or nameLower:find("dualgen") or nameLower:find("machine") or nameLower:find("trickortreatgen"))
                 if not isMachine then return end
 
                 if isMachineCompleted(model) then return end
@@ -1300,21 +1300,33 @@ EspTab:CreateToggle({
 
                     task.spawn(function()
                         while generatorEspEnabled and model and model.Parent and folder and folder.Parent do
-                            if model.Name == "BaseMachine" or isMachineCompleted(model) then
+                            if model.Name == "BaseMachine" or model.Name == "BaseMachine_Mirror" or isMachineCompleted(model) then
                                 folder:Destroy()
                                 break
                             end
 
-                            local requiredVal = model:FindFirstChild("RequiredAmount", true)
-                            local currentVal = model:FindFirstChild("CurrentAmount", true)
-                            local connieVal = model:FindFirstChild("Connie", true)
+                            local stats = model:FindFirstChild("Stats")
+                            local reqValObj = (stats and stats:FindFirstChild("RequiredAmount")) or model:FindFirstChild("RequiredAmount", true)
+                            local curValObj = (stats and stats:FindFirstChild("CurrentAmount")) or model:FindFirstChild("CurrentAmount", true)
+                            local compValObj = (stats and stats:FindFirstChild("Completed")) or model:FindFirstChild("Completed", true)
 
-                            local reqAmt = requiredVal and requiredVal.Value or 0
-                            local curAmt = currentVal and currentVal.Value or 0
+                            local reqAmt = reqValObj and reqValObj.Value or 0
+                            local curAmt = curValObj and curValObj.Value or 0
+                            local isCompleted = compValObj and compValObj.Value == true
 
-                            -- Simplifica número do CurrentAmount (ex: 32.9 -> 32)
+                            if isCompleted then
+                                folder:Destroy()
+                                local bm = workspace:FindFirstChild("BaseMachine", true)
+                                if bm and bm:FindFirstChild("CustomESP") then bm.CustomESP:Destroy() end
+                                local bmm = workspace:FindFirstChild("BaseMachine_Mirror", true)
+                                if bmm and bmm:FindFirstChild("CustomESP") then bmm.CustomESP:Destroy() end
+                                break
+                            end
+
                             local simpleCurAmt = math.floor(tonumber(curAmt) or 0)
+                            local simpleReqAmt = math.floor(tonumber(reqAmt) or 0)
 
+                            local connieVal = model:FindFirstChild("Connie", true)
                             if connieVal and connieVal.Value == true then
                                 highlight.FillColor = Color3.fromRGB(135, 206, 250)
                                 highlight.OutlineColor = Color3.fromRGB(135, 206, 250)
@@ -1324,7 +1336,7 @@ EspTab:CreateToggle({
                                 highlight.FillColor = Color3.fromRGB(80, 80, 80)
                                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
                                 textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                                textLabel.Text = "Machine | " .. tostring(simpleCurAmt) .. "/" .. tostring(reqAmt)
+                                textLabel.Text = "Machine | " .. tostring(simpleCurAmt) .. "/" .. tostring(simpleReqAmt)
                             end
 
                             task.wait(0.2)
@@ -1341,7 +1353,7 @@ EspTab:CreateToggle({
                 generatorConn = workspace.DescendantAdded:Connect(function(obj)
                     if generatorEspEnabled and obj:IsA("Model") then
                         task.wait(0.1)
-                        if obj.Name == "BaseMachine" then
+                        if obj.Name == "BaseMachine" or obj.Name == "BaseMachine_Mirror" then
                             local custom = obj:FindFirstChild("CustomESP")
                             if custom then custom:Destroy() end
                         else
@@ -1695,7 +1707,6 @@ TeleportTab:CreateButton({
     end 
 })
 
--- Botão Flutuante (ScreenGui) para o Teleport To Machine Button
 local screenGuiButton = nil
 
 TeleportTab:CreateToggle({
@@ -1709,7 +1720,6 @@ TeleportTab:CreateToggle({
                 sg.Name = "TpMachineButtonGui"
                 sg.ResetOnSpawn = false
 
-                -- Tenta anexar ao CoreGui, senão usa PlayerGui
                 local parentGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
                 pcall(function()
                     if gethui then
@@ -1722,16 +1732,15 @@ TeleportTab:CreateToggle({
 
                 local imgButton = Instance.new("ImageButton")
                 imgButton.Name = "TpMachineBtn"
-                imgButton.Size = UDim2.new(0, 65, 0, 65) -- Tamanho pequeno e discreto
+                imgButton.Size = UDim2.new(0, 65, 0, 65)
                 imgButton.Position = UDim2.new(0.85, 0, 0.5, 0)
                 imgButton.BackgroundTransparency = 1
                 imgButton.Image = "rbxassetid://123753414381011"
                 imgButton.ScaleType = Enum.ScaleType.Fit
                 imgButton.Active = true
-                imgButton.Draggable = true -- Permite arrastar o botão pela tela
+                imgButton.Draggable = true
                 imgButton.Parent = sg
 
-                -- Efeito visual ao clicar no botão
                 imgButton.MouseButton1Down:Connect(function()
                     imgButton.Size = UDim2.new(0, 58, 0, 58)
                 end)
@@ -1889,9 +1898,7 @@ task.spawn(function()
                         if parentPart then
                             local promptPos = parentPart:IsA("BasePart") and parentPart.Position or (parentPart:IsA("Model") and (parentPart.PrimaryPart and parentPart.PrimaryPart.Position or parentPart:GetPivot().Position))
                             if promptPos then
-                                -- Checa se está perto do jogador
                                 if (promptPos - HumanoidRootPart.Position).Magnitude <= (obj.MaxActivationDistance or 15) then
-                                    -- Checa se NÃO está dentro/próximo de GourdyMonster ou FakeCapsule
                                     local isForbidden = false
                                     local currentAncestor = parentPart
                                     while currentAncestor and currentAncestor ~= workspace do
@@ -1902,7 +1909,6 @@ task.spawn(function()
                                         currentAncestor = currentAncestor.Parent
                                     end
 
-                                    -- Checa se NÃO está próximo de um Elevator (15 studs)
                                     local isNearElevator = isElevatorNearby(promptPos, 15)
 
                                     if not isForbidden and not isNearElevator and canInteractWithPosition(promptPos) then
@@ -1915,7 +1921,7 @@ task.spawn(function()
                 end
             end)
         end
-        task.wait(0.1) -- Loop rápido para ativação instantânea do prompt
+        task.wait(0.25)
     end
 end)
 
