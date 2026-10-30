@@ -3799,7 +3799,6 @@ ConfigTab:CreateButton({
         if Window.flags then
             for flagName, flagObj in pairs(Window.flags) do
                 if type(flagObj) == "table" and flagObj.Get then
-                    -- Se o objeto tiver GetEnabled (Sliders com Toggle), salvamos o valor e o estado do toggle separadamente
                     if flagObj.GetEnabled then
                         dataToSave[flagName] = {Value = flagObj.Get(), Enabled = flagObj.GetEnabled()}
                     else
@@ -3877,23 +3876,18 @@ ConfigTab:CreateButton({
                     if Window.flags and Window.flags[flagName] then
                         local flagObj = Window.flags[flagName]
                         
-                        -- Tratamento para Sliders com Toggle (que salvam uma tabela com Value e Enabled)
                         if type(savedValue) == "table" and savedValue.Value ~= nil and savedValue.Enabled ~= nil then
                             if flagObj.Set then flagObj.Set(savedValue.Value) end
                             if flagObj.SetEnabled then flagObj.SetEnabled(savedValue.Enabled, true) end
                         else
-                            -- Para Toggles normais, Inputs, Dropdowns e Sliders simples
                             if flagObj.Set then flagObj.Set(savedValue) end
                             
-                            -- Como o .Set() interno muitas vezes não dispara o callback de ativação lógica, 
-                            -- simulamos a ativação chamando a lógica de cada flag específica abaixo:
+                            -- Força a ativação lógica das funções principais ao carregar
                             if flagName == "PlayerSpeed" then
                                 speedValue = savedValue
                                 speedEnabled = true
                                 if flagObj.SetEnabled then flagObj.SetEnabled(true, true) end
                             elseif flagName == "NoclipToggle" then
-                                local cb = MainTab and true -- força reativação se necessário
-                                -- Dispara a lógica do Noclip diretamente se salvo como true
                                 if savedValue == true then
                                     applyNoclip()
                                     if not NoclipConnection then
