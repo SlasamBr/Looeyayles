@@ -3876,16 +3876,12 @@ ConfigTab:CreateButton({
                     if Window.flags and Window.flags[flagName] then
                         local fObj = Window.flags[flagName]
                         
-                        -- Trata Sliders com Toggle integrado (passando `true` para disparar o estado correto)
+                        -- Trata Sliders com Toggle integrado
                         if type(savedValue) == "table" and savedValue.Value ~= nil and savedValue.Enabled ~= nil then
                             if fObj.Set then fObj.Set(savedValue.Value) end
                             if fObj.SetEnabled then fObj.SetEnabled(savedValue.Enabled, true) end
-                        -- Trata Toggles comuns, Sliders simples e Dropdowns (passando `true` para forçar o callback)
+                        -- Trata Toggles comuns, Sliders simples e Dropdowns de forma segura
                         elseif fObj.Set then
-                            pcall(function()
-                                fObj.Set(savedValue, true)
-                            end)
-                            -- Fallback caso o método .Set aceite apenas 1 argumento
                             pcall(function()
                                 fObj.Set(savedValue)
                             end)
