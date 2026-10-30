@@ -3618,7 +3618,7 @@ FunTab:CreateButton({
     end,
 })
 
-local SettingsTab = Window:CreateTab("Settings", 6035047409)
+local SettingsTab = Window:CreateTab("Settings", 85280212335165)
 
 SettingsTab:CreateSection("Device")
 
@@ -3701,7 +3701,7 @@ SettingsTab:CreateButton({
 -- ABA CONFIG (SAVE, LOAD, DELETE CONFIG)
 --------------------------------------------------------------------------------
 local HttpService = game:GetService("HttpService")
-local ConfigTab = Window:CreateTab("Config", 6035047409)
+local ConfigTab = Window:CreateTab("Config", 135783364996027)
 
 -- Pasta principal alterada para LooeyCircus e subpasta Configs
 local mainFolder = "LooeyCircus"
