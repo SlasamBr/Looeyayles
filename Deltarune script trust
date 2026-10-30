@@ -3786,12 +3786,12 @@ ConfigTab:CreateButton({
     Name = "Save Config",
     Callback = function()
         if not writefile then
-            Rayfield:Notify({ Title = "Config", Content = "Seu executor não suporta writefile.", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "Your Executor Don't support this.", Duration = 3 })
             return
         end
 
         if configNameInput == "" or configNameInput == "Select Your Config" then
-            Rayfield:Notify({ Title = "Config", Content = "Dê um nome válido para a config!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "Give A Valid Name To The Config!", Duration = 3 })
             return
         end
 
@@ -3812,12 +3812,12 @@ ConfigTab:CreateButton({
         end)
 
         if success then
-            Rayfield:Notify({ Title = "Config Saved", Content = "Config '" .. configNameInput .. "' salva com sucesso!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config Saved", Content = "Config '" .. configNameInput .. "' saved with sucess!", Duration = 3 })
             if ConfigSelectDropdown and ConfigSelectDropdown.Refresh then
                 ConfigSelectDropdown.Refresh(getSavedConfigs())
             end
         else
-            Rayfield:Notify({ Title = "Error", Content = "Erro ao salvar: " .. tostring(err), Duration = 3 })
+            Rayfield:Notify({ Title = "Error", Content = "Error at saving..: " .. tostring(err), Duration = 3 })
         end
     end
 })
@@ -3841,7 +3841,7 @@ ConfigTab:CreateButton({
     Callback = function()
         if ConfigSelectDropdown and ConfigSelectDropdown.Refresh then
             ConfigSelectDropdown.Refresh(getSavedConfigs())
-            Rayfield:Notify({ Title = "Config", Content = "Lista atualizada!", Duration = 2 })
+            Rayfield:Notify({ Title = "Config", Content = "List Updated!", Duration = 2 })
         end
     end
 })
@@ -3850,7 +3850,7 @@ ConfigTab:CreateButton({
     Name = "Load Config",
     Callback = function()
         if not readfile or not isfile then
-            Rayfield:Notify({ Title = "Config", Content = "Your executable does not support reading files", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "Your executor does not support reading files", Duration = 3 })
             return
         end
 
@@ -3895,7 +3895,7 @@ ConfigTab:CreateButton({
         if success then
             Rayfield:Notify({ Title = "Config Loaded", Content = "Config '" .. selectedConfig .. "' Loaded!", Duration = 3 })
         else
-            Rayfield:Notify({ Title = "Erro", Content = "error at loading...: " .. tostring(err), Duration = 3 })
+            Rayfield:Notify({ Title = "Error", Content = "error at loading...: " .. tostring(err), Duration = 3 })
         end
     end
 })
@@ -3904,25 +3904,25 @@ ConfigTab:CreateButton({
     Name = "Delete Config",
     Callback = function()
         if not delfile or not isfile then
-            Rayfield:Notify({ Title = "Config", Content = "Seu executor não suporta deletar arquivos.", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "your executor don't support deleing files..", Duration = 3 })
             return
         end
 
         if selectedConfig == "" or selectedConfig == "Select Your Config" then
-            Rayfield:Notify({ Title = "Config", Content = "Selecione uma configuração para deletar!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "Select a config to delete!", Duration = 3 })
             return
         end
 
         local filePath = configFolder .. "/" .. selectedConfig .. ".json"
         if isfile(filePath) then
             delfile(filePath)
-            Rayfield:Notify({ Title = "Config Deleted", Content = "Configuração '" .. selectedConfig .. "' deletada!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config Deleted", Content = "Config '" .. selectedConfig .. "' deleted!", Duration = 3 })
             
             if ConfigSelectDropdown and ConfigSelectDropdown.Refresh then
                 ConfigSelectDropdown.Refresh(getSavedConfigs())
             end
         else
-            Rayfield:Notify({ Title = "Config", Content = "Arquivo não encontrado para exclusão.", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "File Not Found.", Duration = 3 })
         end
     end
 })
