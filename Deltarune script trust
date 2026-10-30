@@ -3698,7 +3698,7 @@ SettingsTab:CreateButton({
 })
 
 --------------------------------------------------------------------------------
--- ABA CONFIG (SAVE, LOAD, DELETE CONFIG) - 100% CORRIGIDA E FUNCIONAL
+-- ABA CONFIG (SAVE, LOAD, DELETE CONFIG) - CORREÇÃO DEFINITIVA DE ESP, MAP E TPWALK
 --------------------------------------------------------------------------------
 local HttpService = game:GetService("HttpService")
 local ConfigTab = Window:CreateTab("Config", 135783364996027)
@@ -3873,7 +3873,7 @@ ConfigTab:CreateButton({
 
             if loadedData and type(loadedData) == "table" then
                 for flagName, savedValue in pairs(loadedData) do
-                    -- 1. Atualiza a interface gráfica (Flags)
+                    -- Atualiza a interface gráfica do componente se ele existir
                     if Window.flags and Window.flags[flagName] then
                         local fObj = Window.flags[flagName]
                         if type(savedValue) == "table" and savedValue.Value ~= nil and savedValue.Enabled ~= nil then
@@ -3884,56 +3884,81 @@ ConfigTab:CreateButton({
                         end
                     end
 
-                    -- 2. Força a ativação real das funções do jogo baseada nas Flags carregadas
-                    if flagName == "NoclipToggle" then
-                        toggleNoclip(savedValue)
-                    elseif flagName == "PlayerSpeed" then
-                        speedValue = type(savedValue) == "table" and savedValue.Value or savedValue
-                        speedEnabled = type(savedValue) == "table" and savedValue.Enabled or true
-                        if Humanoid then Humanoid.WalkSpeed = speedEnabled and speedValue or 16 end
+                    -- Executa a lógica real de funcionamento para cada recurso (Evitando bugs e ativações indesejadas)
+                    if flagName == "PlayerSpeed" then
+                        local val = type(savedValue) == "table" and savedValue.Value or savedValue
+                        local on = type(savedValue) == "table" and savedValue.Enabled or (val > 16)
+                        speedValue = val
+                        speedEnabled = on
+                        if Humanoid then Humanoid.WalkSpeed = on and val or 16 end
+
                     elseif flagName == "TPWalkSpeed" then
-                        tpWalkSpeed = type(savedValue) == "table" and savedValue.Value or savedValue
-                        tpWalkEnabled = type(savedValue) == "table" and savedValue.Enabled or true
+                        local val = type(savedValue) == "table" and savedValue.Value or savedValue
+                        local on = type(savedValue) == "table" and savedValue.Enabled or false
+                        tpWalkSpeed = val
+                        tpWalkEnabled = on -- Agora respeita rigorosamente se estava desligado!
+
+                    elseif flagName == "NoclipToggle" then
+                        toggleNoclip(savedValue == true)
+
                     elseif flagName == "AutoGetToElevatorToggle" then
-                        autoGetToElevatorEnabled = savedValue
+                        autoGetToElevatorEnabled = (savedValue == true)
                     elseif flagName == "AutoPickUpExtractionItemsToggle" then
-                        autoExtractActive = savedValue
+                        autoExtractActive = (savedValue == true)
                     elseif flagName == "AutoPickUpHealsToggle" then
-                        autoHealsActive = savedValue
+                        autoHealsActive = (savedValue == true)
                     elseif flagName == "AutoCollectResearchCapsulesToggle" then
-                        autoCollectActive = savedValue
+                        autoCollectActive = (savedValue == true)
                     elseif flagName == "AutoCollectEventCurrencyToggle" then
-                        autoCollectEventActive = savedValue
+                        autoCollectEventActive = (savedValue == true)
                     elseif flagName == "AutoPickUpTapesToggle" then
-                        autoPickUpTapesActive = savedValue
+                        autoPickUpTapesActive = (savedValue == true)
                     elseif flagName == "AutoUseItemsToggle" then
-                        autoUseItemsEnabled = savedValue
+                        autoUseItemsEnabled = (savedValue == true)
                     elseif flagName == "AutoAbilityToggle" then
-                        autoAbilityEnabled = savedValue
+                        autoAbilityEnabled = (savedValue == true)
+
+                    -- ESPs (Força o estado real nas variáveis lógicas)
                     elseif flagName == "TwistedEspToggle" then
-                        twistedEspEnabled = savedValue
+                        twistedEspEnabled = (savedValue == true)
                     elseif flagName == "PlayerEspToggle" then
-                        playerEspEnabled = savedValue
+                        playerEspEnabled = (savedValue == true)
                     elseif flagName == "ItemEspToggle" then
-                        itemEspEnabled = savedValue
+                        itemEspEnabled = (savedValue == true)
                     elseif flagName == "GeneratorEspToggle" then
-                        generatorEspEnabled = savedValue
+                        generatorEspEnabled = (savedValue == true)
                     elseif flagName == "IchorPuddlesEspToggle" then
-                        ichorEspEnabled = savedValue
+                        ichorEspEnabled = (savedValue == true)
                     elseif flagName == "ElevatorEspToggle" then
-                        elevatorEspEnabled = savedValue
+                        elevatorEspEnabled = (savedValue == true)
                     elseif flagName == "FakeElevatorEspToggle" then
-                        fakeElevatorEspEnabled = savedValue
+                        fakeElevatorEspEnabled = (savedValue == true)
+                    elseif flagName == "HalloweenCardsEspToggle" then
+                        halloweenCardsEspEnabled = (savedValue == true)
+                    elseif flagName == "HalloweenDoorsEspToggle" then
+                        halloweenDoorsEspEnabled = (savedValue == true)
+
+                    -- Map (Fullbrights)
+                    elseif flagName == "AltFullbrightToggle" then
+                        if savedValue == true then
+                            Lighting.Brightness, Lighting.GlobalShadows, Lighting.OutdoorAmbient, Lighting.Ambient, Lighting.ClockTime, Lighting.FogEnd, Lighting.FogStart = 2, true, Color3.fromRGB(120,120,120), Color3.fromRGB(100,100,100), 14, 100000, 0
+                        end
+                    elseif flagName == "FullbrightToggle" then
+                        if savedValue == true then
+                            Lighting.Brightness = 3; Lighting.ClockTime = 14; Lighting.FogEnd = 999999; Lighting.FogStart = 0; Lighting.GlobalShadows = false; Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255); Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+                        end
+
+                    -- Player extras
+                    elseif flagName == "NoSlipperyToggle" then
+                        noSlipperyEnabled = (savedValue == true)
                     elseif flagName == "ItemAuraToggle" then
-                        itemAuraEnabled = savedValue
+                        itemAuraEnabled = (savedValue == true)
                     elseif flagName == "InstantSkillcheck" then
-                        getgenv().scinstant = savedValue
+                        getgenv().scinstant = (savedValue == true)
                     elseif flagName == "InstantStashGigiPrompt" then
-                        instantStashGigiEnabled = savedValue
+                        instantStashGigiEnabled = (savedValue == true)
                     elseif flagName == "AutoSwimmyToggle" then
-                        autoSwimmyEnabled = savedValue
-                    elseif flagName == "AltFullbrightToggle" or flagName == "FullbrightToggle" then
-                        -- Dispara o estado recarregando se necessário
+                        autoSwimmyEnabled = (savedValue == true)
                     end
                 end
             end
