@@ -3018,7 +3018,7 @@ local adPopupsBlockEnabled = false
 local popUpEventConnection = nil
 
 PlayerTab:CreateToggle({
-    Name = "Twisted Vee Ad Popups Block",
+    Name = "Anti Twisted Vee Popup",
     CurrentValue = false,
     Flag = "TwistedVeeAdPopupsBlockToggle",
     Callback = function(v)
@@ -3698,12 +3698,11 @@ SettingsTab:CreateButton({
 })
 
 --------------------------------------------------------------------------------
--- ABA CONFIG (SAVE, LOAD, DELETE CONFIG)
+-- ABA CONFIG (SAVE, LOAD, DELETE CONFIG) - CORRIGIDA
 --------------------------------------------------------------------------------
 local HttpService = game:GetService("HttpService")
 local ConfigTab = Window:CreateTab("Config", 135783364996027)
 
--- Pasta principal alterada para LooeyCircus e subpasta Configs
 local mainFolder = "LooeyCircus"
 local configFolder = "LooeyCircus/Configs"
 
@@ -3725,7 +3724,6 @@ local function getSavedConfigs()
         local files = listfiles(configFolder)
         for _, filePath in ipairs(files) do
             if filePath:sub(-5) == ".json" then
-                -- Extrai apenas o nome do arquivo ignorando caminhos
                 local fileName = filePath:match("([^/^\\]+)%.json$")
                 if fileName then
                     table.insert(configs, fileName)
@@ -3741,7 +3739,6 @@ end
 
 ConfigTab:CreateSection("Save Config")
 
--- Função auxiliar para criar um elemento de Input de Texto customizado com o design da sua UI
 local function CreateTextboxInput(tab, cfg)
     cfg = cfg or {}
     local holder = new("Frame", {
@@ -3777,7 +3774,6 @@ local function CreateTextboxInput(tab, cfg)
     return textBox
 end
 
--- Input de texto no lugar do Dropdown para digitar o nome da config
 CreateTextboxInput(ConfigTab, {
     Name = "Config Name",
     DefaultText = "default",
@@ -3794,8 +3790,8 @@ ConfigTab:CreateButton({
             return
         end
 
-        if configNameInput == "" or configNameInput == "Nenhuma Config" then
-            Rayfield:Notify({ Title = "Config", Content = "Give the config a valid name!", Duration = 3 })
+        if configNameInput == "" or configNameInput == "Select Your Config" then
+            Rayfield:Notify({ Title = "Config", Content = "Dê um nome válido para a config!", Duration = 3 })
             return
         end
 
@@ -3803,7 +3799,9 @@ ConfigTab:CreateButton({
         if Window.flags then
             for flagName, flagObj in pairs(Window.flags) do
                 if type(flagObj) == "table" and flagObj.Get then
-                    dataToSave[flagName] = flagObj.Get()
+                    local val = flagObj.Get()
+                    -- Se for tabela (MultiSelect dropdown), convertemos para garantir serialização JSON correta
+                    dataToSave[flagName] = val
                 end
             end
         end
@@ -3814,17 +3812,17 @@ ConfigTab:CreateButton({
         end)
 
         if success then
-            Rayfield:Notify({ Title = "Config Saved", Content = "Config '" .. configNameInput .. "' Config Saved!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config Saved", Content = "Config '" .. configNameInput .. "' salva com sucesso!", Duration = 3 })
             if ConfigSelectDropdown and ConfigSelectDropdown.Refresh then
                 ConfigSelectDropdown.Refresh(getSavedConfigs())
             end
         else
-            Rayfield:Notify({ Title = "Error.", Content = "Error. " .. tostring(err), Duration = 3 })
+            Rayfield:Notify({ Title = "Error", Content = "Erro ao salvar: " .. tostring(err), Duration = 3 })
         end
     end
 })
 
-ConfigTab:CreateSection("Saved Configs.")
+ConfigTab:CreateSection("Saved Configs")
 
 local ConfigSelectDropdown
 
@@ -3852,18 +3850,18 @@ ConfigTab:CreateButton({
     Name = "Load Config",
     Callback = function()
         if not readfile or not isfile then
-            Rayfield:Notify({ Title = "Config", Content = "Seu executor não suporta leitura de arquivos.", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "Your executable does not support reading files", Duration = 3 })
             return
         end
 
-        if selectedConfig == "" or selectedConfig == "Nenhuma Config" then
-            Rayfield:Notify({ Title = "Config", Content = "Selecione uma configuração válida!", Duration = 3 })
+        if selectedConfig == "" or selectedConfig == "Select Your Config" then
+            Rayfield:Notify({ Title = "Config", Content = "Select a Valid Config!", Duration = 3 })
             return
         end
 
         local filePath = configFolder .. "/" .. selectedConfig .. ".json"
         if not isfile(filePath) then
-            Rayfield:Notify({ Title = "Config", Content = "Arquivo não encontrado!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config", Content = "File not found", Duration = 3 })
             return
         end
 
@@ -3874,16 +3872,30 @@ ConfigTab:CreateButton({
             if loadedData and type(loadedData) == "table" then
                 for flagName, savedValue in pairs(loadedData) do
                     if Window.flags and Window.flags[flagName] and Window.flags[flagName].Set then
-                        Window.flags[flagName].Set(savedValue, true)
+                        -- Dispara o Set adequadamente tratando tabelas para multi-select
+                        Window.flags[flagName].Set(savedValue)
+                        
+                        -- Dispara também o callback manual se necessário para atualizar variáveis globais de blacklist/etc
+                        if flagName == "ItemEspBlacklistDropdown" then
+                            itemBlacklist = savedValue or {}
+                            for _, obj in ipairs(workspace:GetDescendants()) do
+                                if itemBlacklist[obj.Name] then
+                                    local added = obj:FindFirstChild("ESP_Added")
+                                    if added then added:Destroy() end
+                                end
+                            end
+                        elseif flagName == "PlayerEspBlacklistDropdown" then
+                            playerBlacklist = savedValue or {}
+                        end
                     end
                 end
             end
         end)
 
         if success then
-            Rayfield:Notify({ Title = "Config Loaded", Content = "Configuração '" .. selectedConfig .. "' carregada com sucesso!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config Loaded", Content = "Config '" .. selectedConfig .. "' Loaded!", Duration = 3 })
         else
-            Rayfield:Notify({ Title = "Erro", Content = "Falha ao carregar: " .. tostring(err), Duration = 3 })
+            Rayfield:Notify({ Title = "Erro", Content = "error at loading...: " .. tostring(err), Duration = 3 })
         end
     end
 })
@@ -3896,7 +3908,7 @@ ConfigTab:CreateButton({
             return
         end
 
-        if selectedConfig == "" or selectedConfig == "Nenhuma Config" then
+        if selectedConfig == "" or selectedConfig == "Select Your Config" then
             Rayfield:Notify({ Title = "Config", Content = "Selecione uma configuração para deletar!", Duration = 3 })
             return
         end
