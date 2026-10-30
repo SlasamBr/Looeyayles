@@ -3883,7 +3883,15 @@ ConfigTab:CreateButton({
                         end
                     end
 
-                    -- Correções de lógica básica
+                    -- CORREÇÃO DEFINITIVA: Força o acionamento real dos ESPs ao carregar
+                    if flagName == "TwistedEspToggle" or flagName == "PlayerEspToggle" or flagName == "ItemEspToggle" or flagName == "GeneratorEspToggle" or flagName == "IchorPuddlesEspToggle" or flagName == "ElevatorEspToggle" or flagName == "FakeElevatorEspToggle" or flagName == "HalloweenCardsEspToggle" or flagName == "HalloweenDoorsEspToggle" then
+                        if Window.flags and Window.flags[flagName] and Window.flags[flagName].Set then
+                            local state = (savedValue == true or (type(savedValue) == "table" and savedValue.Value == true))
+                            Window.flags[flagName].Set(state)
+                        end
+                    end
+
+                    -- Correções de lógica básica (Velocidade, Noclip, Fullbright)
                     if flagName == "PlayerSpeed" then
                         local val = type(savedValue) == "table" and savedValue.Value or savedValue
                         local on = type(savedValue) == "table" and savedValue.Enabled or (val > 16)
@@ -3894,14 +3902,6 @@ ConfigTab:CreateButton({
                         tpWalkEnabled = type(savedValue) == "table" and savedValue.Enabled or false
                     elseif flagName == "NoclipToggle" then
                         toggleNoclip(savedValue == true)
-
-                    -- FORÇA A EXECUÇÃO DOS ESPs (Invocando o método Set com o valor salvo para disparar a varredura real do mapa)
-                    elseif flagName == "TwistedEspToggle" or flagName == "PlayerEspToggle" or flagName == "ItemEspToggle" or flagName == "GeneratorEspToggle" or flagName == "IchorPuddlesEspToggle" or flagName == "ElevatorEspToggle" or flagName == "FakeElevatorEspToggle" or flagName == "HalloweenCardsEspToggle" or flagName == "HalloweenDoorsEspToggle" then
-                        if Window.flags and Window.flags[flagName] and Window.flags[flagName].Set then
-                            Window.flags[flagName].Set(savedValue == true)
-                        end
-
-                    -- Map
                     elseif flagName == "AltFullbrightToggle" and savedValue == true then
                         Lighting.Brightness, Lighting.GlobalShadows, Lighting.OutdoorAmbient, Lighting.Ambient, Lighting.ClockTime, Lighting.FogEnd, Lighting.FogStart = 2, true, Color3.fromRGB(120,120,120), Color3.fromRGB(100,100,100), 14, 100000, 0
                     elseif flagName == "FullbrightToggle" and savedValue == true then
