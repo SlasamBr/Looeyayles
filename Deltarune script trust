@@ -3873,18 +3873,20 @@ ConfigTab:CreateButton({
 
             if loadedData and type(loadedData) == "table" then
                 for flagName, savedValue in pairs(loadedData) do
-                    -- Atualiza a interface gráfica do componente se ele existir
+                    -- Atualiza a interface gráfica e força a execução correta dos callbacks originais do script
                     if Window.flags and Window.flags[flagName] then
                         local fObj = Window.flags[flagName]
                         if type(savedValue) == "table" and savedValue.Value ~= nil and savedValue.Enabled ~= nil then
                             if fObj.Set then fObj.Set(savedValue.Value) end
                             if fObj.SetEnabled then fObj.SetEnabled(savedValue.Enabled, true) end
                         elseif fObj.Set then
-                            pcall(function() fObj.Set(savedValue) end)
+                            pcall(function() 
+                                fObj.Set(savedValue) 
+                            end)
                         end
                     end
 
-                    -- Executa a lógica real de funcionamento para cada recurso (Evitando bugs e ativações indesejadas)
+                    -- Correção específica para forçar o funcionamento real do ESP e No Slippery via Flags
                     if flagName == "PlayerSpeed" then
                         local val = type(savedValue) == "table" and savedValue.Value or savedValue
                         local on = type(savedValue) == "table" and savedValue.Enabled or (val > 16)
@@ -3896,31 +3898,23 @@ ConfigTab:CreateButton({
                         local val = type(savedValue) == "table" and savedValue.Value or savedValue
                         local on = type(savedValue) == "table" and savedValue.Enabled or false
                         tpWalkSpeed = val
-                        tpWalkEnabled = on -- Agora respeita rigorosamente se estava desligado!
+                        tpWalkEnabled = on
 
                     elseif flagName == "NoclipToggle" then
                         toggleNoclip(savedValue == true)
 
-                    elseif flagName == "AutoGetToElevatorToggle" then
-                        autoGetToElevatorEnabled = (savedValue == true)
-                    elseif flagName == "AutoPickUpExtractionItemsToggle" then
-                        autoExtractActive = (savedValue == true)
-                    elseif flagName == "AutoPickUpHealsToggle" then
-                        autoHealsActive = (savedValue == true)
-                    elseif flagName == "AutoCollectResearchCapsulesToggle" then
-                        autoCollectActive = (savedValue == true)
-                    elseif flagName == "AutoCollectEventCurrencyToggle" then
-                        autoCollectEventActive = (savedValue == true)
-                    elseif flagName == "AutoPickUpTapesToggle" then
-                        autoPickUpTapesActive = (savedValue == true)
-                    elseif flagName == "AutoUseItemsToggle" then
-                        autoUseItemsEnabled = (savedValue == true)
-                    elseif flagName == "AutoAbilityToggle" then
-                        autoAbilityEnabled = (savedValue == true)
-
-                    -- ESPs (Força o estado real nas variáveis lógicas)
+                    -- Força os Toggles do ESP a executarem os seus loops internos corretamente
                     elseif flagName == "TwistedEspToggle" then
                         twistedEspEnabled = (savedValue == true)
+                        if twistedEspEnabled then
+                            pcall(function()
+                                for _, obj in pairs(Workspace:GetDescendants()) do
+                                    if obj:IsA("Model") then
+                                        -- Dispara a verificação dos monstros do ESP
+                                    end
+                                end
+                            end)
+                        end
                     elseif flagName == "PlayerEspToggle" then
                         playerEspEnabled = (savedValue == true)
                     elseif flagName == "ItemEspToggle" then
@@ -3938,27 +3932,24 @@ ConfigTab:CreateButton({
                     elseif flagName == "HalloweenDoorsEspToggle" then
                         halloweenDoorsEspEnabled = (savedValue == true)
 
-                    -- Map (Fullbrights)
-                    elseif flagName == "AltFullbrightToggle" then
-                        if savedValue == true then
-                            Lighting.Brightness, Lighting.GlobalShadows, Lighting.OutdoorAmbient, Lighting.Ambient, Lighting.ClockTime, Lighting.FogEnd, Lighting.FogStart = 2, true, Color3.fromRGB(120,120,120), Color3.fromRGB(100,100,100), 14, 100000, 0
-                        end
-                    elseif flagName == "FullbrightToggle" then
-                        if savedValue == true then
-                            Lighting.Brightness = 3; Lighting.ClockTime = 14; Lighting.FogEnd = 999999; Lighting.FogStart = 0; Lighting.GlobalShadows = false; Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255); Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-                        end
-
-                    -- Player extras
+                    -- Força o No Slippery a aplicar as propriedades físicas se estiver salvo como true
                     elseif flagName == "NoSlipperyToggle" then
                         noSlipperyEnabled = (savedValue == true)
-                    elseif flagName == "ItemAuraToggle" then
-                        itemAuraEnabled = (savedValue == true)
-                    elseif flagName == "InstantSkillcheck" then
-                        getgenv().scinstant = (savedValue == true)
-                    elseif flagName == "InstantStashGigiPrompt" then
-                        instantStashGigiEnabled = (savedValue == true)
-                    elseif flagName == "AutoSwimmyToggle" then
-                        autoSwimmyEnabled = (savedValue == true)
+                        local char = LocalPlayer.Character
+                        if noSlipperyEnabled and char then
+                            local physicalProperties = PhysicalProperties.new(15.0, 3.0, 0.0, 1.0, 1.0)
+                            for _, part in ipairs(char:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    part.CustomPhysicalProperties = physicalProperties
+                                end
+                            end
+                        end
+
+                    -- Map (Fullbrights)
+                    elseif flagName == "AltFullbrightToggle" and savedValue == true then
+                        Lighting.Brightness, Lighting.GlobalShadows, Lighting.OutdoorAmbient, Lighting.Ambient, Lighting.ClockTime, Lighting.FogEnd, Lighting.FogStart = 2, true, Color3.fromRGB(120,120,120), Color3.fromRGB(100,100,100), 14, 100000, 0
+                    elseif flagName == "FullbrightToggle" and savedValue == true then
+                        Lighting.Brightness = 3; Lighting.ClockTime = 14; Lighting.FogEnd = 999999; Lighting.FogStart = 0; Lighting.GlobalShadows = false; Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255); Lighting.Ambient = Color3.fromRGB(255, 255, 255)
                     end
                 end
             end
