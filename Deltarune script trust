@@ -3799,9 +3799,12 @@ ConfigTab:CreateButton({
         if Window.flags then
             for flagName, flagObj in pairs(Window.flags) do
                 if type(flagObj) == "table" and flagObj.Get then
-                    local val = flagObj.Get()
-                    -- Se for tabela (MultiSelect dropdown), convertemos para garantir serialização JSON correta
-                    dataToSave[flagName] = val
+                    -- Se o objeto tiver GetEnabled (Sliders com Toggle), salvamos o valor e o estado do toggle separadamente
+                    if flagObj.GetEnabled then
+                        dataToSave[flagName] = {Value = flagObj.Get(), Enabled = flagObj.GetEnabled()}
+                    else
+                        dataToSave[flagName] = flagObj.Get()
+                    end
                 end
             end
         end
@@ -3871,21 +3874,53 @@ ConfigTab:CreateButton({
 
             if loadedData and type(loadedData) == "table" then
                 for flagName, savedValue in pairs(loadedData) do
-                    if Window.flags and Window.flags[flagName] and Window.flags[flagName].Set then
-                        -- Dispara o Set adequadamente tratando tabelas para multi-select
-                        Window.flags[flagName].Set(savedValue)
+                    if Window.flags and Window.flags[flagName] then
+                        local flagObj = Window.flags[flagName]
                         
-                        -- Dispara também o callback manual se necessário para atualizar variáveis globais de blacklist/etc
-                        if flagName == "ItemEspBlacklistDropdown" then
-                            itemBlacklist = savedValue or {}
-                            for _, obj in ipairs(workspace:GetDescendants()) do
-                                if itemBlacklist[obj.Name] then
-                                    local added = obj:FindFirstChild("ESP_Added")
-                                    if added then added:Destroy() end
+                        -- Tratamento para Sliders com Toggle (que salvam uma tabela com Value e Enabled)
+                        if type(savedValue) == "table" and savedValue.Value ~= nil and savedValue.Enabled ~= nil then
+                            if flagObj.Set then flagObj.Set(savedValue.Value) end
+                            if flagObj.SetEnabled then flagObj.SetEnabled(savedValue.Enabled, true) end
+                        else
+                            -- Para Toggles normais, Inputs, Dropdowns e Sliders simples
+                            if flagObj.Set then flagObj.Set(savedValue) end
+                            
+                            -- Como o .Set() interno muitas vezes não dispara o callback de ativação lógica, 
+                            -- simulamos a ativação chamando a lógica de cada flag específica abaixo:
+                            if flagName == "PlayerSpeed" then
+                                speedValue = savedValue
+                                speedEnabled = true
+                                if flagObj.SetEnabled then flagObj.SetEnabled(true, true) end
+                            elseif flagName == "NoclipToggle" then
+                                local cb = MainTab and true -- força reativação se necessário
+                                -- Dispara a lógica do Noclip diretamente se salvo como true
+                                if savedValue == true then
+                                    applyNoclip()
+                                    if not NoclipConnection then
+                                        NoclipConnection = RunService.Stepped:Connect(function()
+                                            local character = LocalPlayer.Character
+                                            if character then
+                                                for _, part in ipairs(character:GetDescendants()) do
+                                                    if part:IsA("BasePart") then part.CanCollide = false end
+                                                end
+                                            end
+                                        end)
+                                    end
                                 end
+                            elseif flagName == "TPWalkSpeed" then
+                                tpWalkSpeed = savedValue
+                                tpWalkEnabled = true
+                            elseif flagName == "ItemEspBlacklistDropdown" then
+                                itemBlacklist = savedValue or {}
+                                for _, obj in ipairs(workspace:GetDescendants()) do
+                                    if itemBlacklist[obj.Name] then
+                                        local added = obj:FindFirstChild("ESP_Added")
+                                        if added then added:Destroy() end
+                                    end
+                                end
+                            elseif flagName == "PlayerEspBlacklistDropdown" then
+                                playerBlacklist = savedValue or {}
                             end
-                        elseif flagName == "PlayerEspBlacklistDropdown" then
-                            playerBlacklist = savedValue or {}
                         end
                     end
                 end
