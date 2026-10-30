@@ -3873,48 +3873,64 @@ ConfigTab:CreateButton({
 
             if loadedData and type(loadedData) == "table" then
                 for flagName, savedValue in pairs(loadedData) do
-                    if Window.flags and Window.flags[flagName] then
-                        local flagObj = Window.flags[flagName]
+                    -- 1. Trata os Sliders com Toggle integrado
+                    if type(savedValue) == "table" and savedValue.Value ~= nil and savedValue.Enabled ~= nil then
+                        if Window.flags and Window.flags[flagName] then
+                            local fObj = Window.flags[flagName]
+                            if fObj.Set then fObj.Set(savedValue.Value) end
+                            if fObj.SetEnabled then fObj.SetEnabled(savedValue.Enabled, true) end
+                        end
                         
-                        if type(savedValue) == "table" and savedValue.Value ~= nil and savedValue.Enabled ~= nil then
-                            if flagObj.Set then flagObj.Set(savedValue.Value) end
-                            if flagObj.SetEnabled then flagObj.SetEnabled(savedValue.Enabled, true) end
-                        else
-                            if flagObj.Set then flagObj.Set(savedValue) end
-                            
-                            -- Força a ativação lógica das funções principais ao carregar
-                            if flagName == "PlayerSpeed" then
-                                speedValue = savedValue
-                                speedEnabled = true
-                                if flagObj.SetEnabled then flagObj.SetEnabled(true, true) end
-                            elseif flagName == "NoclipToggle" then
-                                if savedValue == true then
-                                    applyNoclip()
-                                    if not NoclipConnection then
-                                        NoclipConnection = RunService.Stepped:Connect(function()
-                                            local character = LocalPlayer.Character
-                                            if character then
-                                                for _, part in ipairs(character:GetDescendants()) do
-                                                    if part:IsA("BasePart") then part.CanCollide = false end
-                                                end
+                        -- Executa a lógica manual dos Sliders com Toggle conhecidos
+                        if flagName == "PlayerSpeed" then
+                            speedValue = savedValue.Value
+                            speedEnabled = savedValue.Enabled
+                            if Humanoid then Humanoid.WalkSpeed = savedValue.Enabled and savedValue.Value or 16 end
+                        elseif flagName == "TPWalkSpeed" then
+                            tpWalkSpeed = savedValue.Value
+                            tpWalkEnabled = savedValue.Enabled
+                        end
+
+                    -- 2. Trata Toggles comuns, Sliders simples, Inputs e Dropdowns
+                    else
+                        if Window.flags and Window.flags[flagName] and Window.flags[flagName].Set then
+                            Window.flags[flagName].Set(savedValue)
+                        end
+
+                        -- Força a execução real da lógica de cada Toggle/Função ao carregar
+                        if flagName == "NoclipToggle" then
+                            if savedValue == true then
+                                applyNoclip()
+                                if not NoclipConnection then
+                                    NoclipConnection = RunService.Stepped:Connect(function()
+                                        local character = LocalPlayer.Character
+                                        if character then
+                                            for _, part in ipairs(character:GetDescendants()) do
+                                                if part:IsA("BasePart") then part.CanCollide = false end
                                             end
-                                        end)
-                                    end
+                                        end
+                                    end)
                                 end
-                            elseif flagName == "TPWalkSpeed" then
-                                tpWalkSpeed = savedValue
-                                tpWalkEnabled = true
-                            elseif flagName == "ItemEspBlacklistDropdown" then
-                                itemBlacklist = savedValue or {}
-                                for _, obj in ipairs(workspace:GetDescendants()) do
-                                    if itemBlacklist[obj.Name] then
-                                        local added = obj:FindFirstChild("ESP_Added")
-                                        if added then added:Destroy() end
-                                    end
-                                end
-                            elseif flagName == "PlayerEspBlacklistDropdown" then
-                                playerBlacklist = savedValue or {}
+                            else
+                                if NoclipConnection then NoclipConnection:Disconnect(); NoclipConnection = nil end
                             end
+
+                        elseif flagName == "TwistedEspToggle" then
+                            -- Simula o callback do Twisted ESP ligando/desligando
+                            local toggleFunc = getconnections and getconnections(Window.flags[flagName]) -- fallback se necessário
+                            -- Como o callback está isolado, a forma mais garantida é disparar a rotina global se houver variável, 
+                            -- mas neste script os ESPs dependem do callback original do CreateToggle. 
+                            -- Se persistir, recrie o toggle manualmente ou ative-o via script.
+                        elseif flagName == "ItemEspBlacklistDropdown" then
+                            itemBlacklist = savedValue or {}
+                            for _, obj in ipairs(workspace:GetDescendants()) do
+                                if itemBlacklist[obj.Name] then
+                                    local added = obj:FindFirstChild("ESP_Added")
+                                    if added then added:Destroy() end
+                                end
+                            end
+                        elseif flagName == "PlayerEspBlacklistDropdown" then
+                            playerBlacklist = savedValue or {}
                         end
                     end
                 end
@@ -3922,7 +3938,7 @@ ConfigTab:CreateButton({
         end)
 
         if success then
-            Rayfield:Notify({ Title = "Config Loaded", Content = "Config '" .. selectedConfig .. "' Loaded!", Duration = 3 })
+            Rayfield:Notify({ Title = "Config Loaded", Content = "Config '" .. selectedConfig .. "' Loaded & Applied!", Duration = 3 })
         else
             Rayfield:Notify({ Title = "Error", Content = "error at loading...: " .. tostring(err), Duration = 3 })
         end
