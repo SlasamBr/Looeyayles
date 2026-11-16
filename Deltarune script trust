@@ -397,34 +397,44 @@ function Tab:CreateSlider(cfg)
 		if fire and cfg.Callback then task.spawn(cfg.Callback, val, enabled) end
 	end
 
+	-- CORREÇÃO DA FUNCIONALIDADE DE ARRASTAR DOS SLIDERS
+	local dragging = false
+	local function updateSlider(input)
+		local pos = track.AbsolutePosition.X
+		local size = track.AbsoluteSize.X
+		if size > 0 then
+			local relX = math.clamp(input.Position.X - pos, 0, size)
+			local pct = relX / size
+			local newVal = min + (max - min) * pct
+			set(newVal, true)
+		end
+	end
+
+	track.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			updateSlider(input)
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			updateSlider(input)
+		end
+	end)
+
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
 	set(val, false)
 	refresh()
 
 	if hasToggle then
 		onTap(switch, function() setEnabled(not enabled, true) end)
 	end
-
-	local held = false
-	local function fromX(x)
-		local rel = (x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1)
-		set(min + rel * (max - min), true)
-	end
-	track.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			held = true
-			fromX(input.Position.X)
-		end
-	end)
-	UIS.InputChanged:Connect(function(input)
-		if held and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			fromX(input.Position.X)
-		end
-	end)
-	UIS.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			held = false
-		end
-	end)
 
 	if cfg.Flag then
 		self.win.flags[cfg.Flag] = {
@@ -715,7 +725,7 @@ function Looey:CreateWindow(cfg)
 	local minBtn = topBtn("-", -42, c.cyan)
 	local closeBtn = topBtn("X", -12, c.rose)
 
-		local side = new("ScrollingFrame", {
+	local side = new("ScrollingFrame", {
 		Name = "Sidebar", Position = UDim2.new(0,0,0,40), Size = UDim2.new(0,self.sideW,1,-40),
 		BackgroundColor3 = c.bg, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 3, Parent = main,
 		ScrollBarThickness = 3, ScrollBarImageColor3 = c.gold, CanvasSize = UDim2.new(0,0,0,0),
@@ -841,7 +851,7 @@ function Looey:intro(done)
 	
 	local holder = new("Frame", {
 		AnchorPoint = Vector2.new(0.5,0.5), Position = UDim2.new(0.5,0,0.5,0),
-		Size = UDim2.new(1,0,0,200), BackgroundTransparency = 1, ZIndex = 101, Parent = cover,
+		Size = UDim2.new(1,0,0,220), BackgroundTransparency = 1, ZIndex = 101, Parent = cover,
 	})
 	new("UIListLayout", {
 		FillDirection = Enum.FillDirection.Vertical, HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -849,14 +859,17 @@ function Looey:intro(done)
 		SortOrder = Enum.SortOrder.LayoutOrder, Parent = holder,
 	})
 
-	local lines = {"Welcome To...", "Looey's Circus Gui!"}
+	local lines = {"Welcome To...", "Looey's Circus Gui!", "This script was Discontinued."}
 
 	task.spawn(function()
 		for i, text in ipairs(lines) do
-			local size = (i == 1) and 22 or 36
+			local size = (i == 1) and 22 or (i == 2 and 36 or 16)
+			local textFont = (i == 1) and fontBold or (i == 2 and fontBlack or fontMed)
+			local textColor = (i == 3) and c.rose or c.gold
+
 			local lbl = new("TextLabel", {
-				Text = "", Font = (i == 1) and fontBold or fontBlack, TextSize = size,
-				TextColor3 = c.gold, BackgroundTransparency = 1,
+				Text = "", Font = textFont, TextSize = size,
+				TextColor3 = textColor, BackgroundTransparency = 1,
 				Size = UDim2.new(0.9,0,0,size + 12), TextTransparency = 1,
 				TextStrokeTransparency = 1, TextStrokeColor3 = Color3.fromRGB(0,0,0),
 				LayoutOrder = i, Parent = holder,
@@ -1151,7 +1164,7 @@ if LocalPlayer.Character then
     updateCharVars(LocalPlayer.Character)
 end
 
--- Blacklist Tables (Twisted removed)
+-- Blacklist Tables
 local itemBlacklist = {}
 local playerBlacklist = {}
 
@@ -1219,6 +1232,7 @@ local function teleportTo(name, isExact)
             local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
             if part then
                 local targetPos = part:IsA("Model") and part:GetPivot().Position or part.Position
+                if isElevatorNearby(targetPos, 30) then continue end
                 if isTwistedNearby(targetPos, 30) then
                     Rayfield:Notify({ Title = "Teleport", Content = "Twisted Nearby.", Duration = 2 })
                     return false
@@ -1252,7 +1266,7 @@ local function performTeleportToMachine()
 
                 if not isCompleted then
                     local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-                    if part and not isTwistedNearby(part.Position, 30) then
+                    if part and not isTwistedNearby(part.Position, 30) and not isElevatorNearby(part.Position, 30) then
                         table.insert(generators, part)
                     end
                 end
@@ -1263,7 +1277,7 @@ local function performTeleportToMachine()
         local randomGen = generators[math.random(1, #generators)]
         HumanoidRootPart.CFrame = randomGen.CFrame + Vector3.new(0, 3, 0)
     else
-        Rayfield:Notify({ Title = "Teleport", Content = "Twisted Nearby.", Duration = 2 })
+        Rayfield:Notify({ Title = "Teleport", Content = "Twisted Nearby or inside Elevator.", Duration = 2 })
     end
 end
 
@@ -1539,7 +1553,7 @@ task.spawn(function()
                             if not autoExtractActive or isInventoryFull() then break end
                             if extractionNames[obj.Name] then
                                 local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                                if part then
+                                if part and not isElevatorNearby(part.Position, 15) then
                                     smartCollectItem(obj)
                                 end
                             end
@@ -1553,7 +1567,7 @@ task.spawn(function()
                             if not autoHealsActive or isInventoryFull() then break end
                             if healNames[obj.Name] then
                                 local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                                if part then
+                                if part and not isElevatorNearby(part.Position, 15) then
                                     smartCollectItem(obj)
                                 end
                             end
@@ -1569,7 +1583,7 @@ task.spawn(function()
                                 local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
                                 if prompt then
                                     local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                                    if part then
+                                    if part and not isElevatorNearby(part.Position, 15) then
                                         smartCollectItem(obj)
                                     end
                                 end
@@ -1585,7 +1599,7 @@ task.spawn(function()
                         if not autoCollectActive then break end
                         if obj.Name == "ResearchCapsule" then
                             local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                            if part then
+                            if part and not isElevatorNearby(part.Position, 15) then
                                 smartCollectItem(obj)
                             end
                         end
@@ -1599,7 +1613,7 @@ task.spawn(function()
                         if not autoCollectEventActive then break end
                         if eventCurrencyNames[obj.Name] then
                             local part = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart", true)
-                            if part then
+                            if part and not isElevatorNearby(part.Position, 15) then
                                 smartCollectItem(obj)
                             end
                         end
@@ -1833,6 +1847,98 @@ EspTab:CreateToggle({
         twistedDisableNametags = v
         for _, tag in ipairs(activeTwistedMonsters) do
             if tag and tag.Parent then tag.Enabled = not twistedDisableNametags end
+        end
+    end
+})
+
+-- Sprout Tendril Esp
+local sproutTendrilEspEnabled = false
+local sproutTendrilDisableNametags = false -- ADICIONADO PARA CONTROLE
+local activeSproutTendrilNametags = {}
+local sproutTendrilConnection = nil
+
+EspTab:CreateToggle({
+    Name = "Sprout Tendril Esp",
+    CurrentValue = false,
+    Flag = "SproutTendrilEspToggle",
+    Callback = function(v)
+        sproutTendrilEspEnabled = v
+
+        local function setupSproutTendril(obj)
+            if not obj or obj.Name ~= "SproutTendril" or obj:FindFirstChild("SproutTendrilESP") then return end
+
+            local folder = Instance.new("Folder")
+            folder.Name = "SproutTendrilESP"
+            folder.Parent = obj
+
+            local highlight = Instance.new("Highlight")
+            highlight.Name = "Chams"
+            highlight.Adornee = obj
+            highlight.FillColor = Color3.fromRGB(0, 0, 0)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+            highlight.OutlineTransparency = 0
+            highlight.Parent = folder
+
+            local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
+            if part then
+                local billboard = Instance.new("BillboardGui")
+                billboard.Name = "Nametag"
+                billboard.Adornee = part
+                billboard.Size = UDim2.new(0, 200, 0, 50)
+                billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+                billboard.AlwaysOnTop = true
+                billboard.Enabled = not sproutTendrilDisableNametags -- APLICADO O TOGGLE DE DISABLE NAMETAGS
+
+                table.insert(activeSproutTendrilNametags, billboard)
+                billboard.Parent = folder
+
+                local textLabel = Instance.new("TextLabel", billboard)
+                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                textLabel.BackgroundTransparency = 1
+                textLabel.Text = "Twisted Sprout Tendril"
+                textLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+                textLabel.TextSize = 9
+                textLabel.Font = Enum.Font.FredokaOne
+                textLabel.TextStrokeTransparency = 0
+                textLabel.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end
+
+        if sproutTendrilEspEnabled then
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                setupSproutTendril(obj)
+            end
+            if sproutTendrilConnection then sproutTendrilConnection:Disconnect() end
+            sproutTendrilConnection = workspace.DescendantAdded:Connect(function(obj)
+                if sproutTendrilEspEnabled then
+                    task.wait(0.1)
+                    setupSproutTendril(obj)
+                end
+            end)
+        else
+            if sproutTendrilConnection then
+                sproutTendrilConnection:Disconnect()
+                sproutTendrilConnection = nil
+            end
+            activeSproutTendrilNametags = {}
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                local espFolder = obj:FindFirstChild("SproutTendrilESP")
+                if espFolder then espFolder:Destroy() end
+            end
+        end
+    end
+})
+
+-- ADICIONADO O TOGGLE PARA DESATIVAR NAMETAGS DO SPROUT TENDRIL
+EspTab:CreateToggle({
+    Name = "Disable Sprout Tendril Nametags",
+    CurrentValue = false,
+    Flag = "SproutTendrilDisableNametagsToggle",
+    Callback = function(v)
+        sproutTendrilDisableNametags = v
+        for _, tag in ipairs(activeSproutTendrilNametags) do
+            if tag and tag.Parent then tag.Enabled = not sproutTendrilDisableNametags end
         end
     end
 })
@@ -2192,210 +2298,6 @@ EspTab:CreateToggle({
     end
 })
 
-EspTab:CreateSection("Halloween Event ESP")
-
-local halloweenCardsEspEnabled = false
-local halloweenCardsDisableNametags = false
-local activeHalloweenCardsNametags = {}
-local halloweenCardsConnection = nil
-
-local function applyHalloweenCardsESP(obj)
-    if not obj or obj.Name ~= "CollectablePiece" or obj:FindFirstChild("HalloweenCardESP") then return end
-
-    local folder = Instance.new("Folder")
-    folder.Name = "HalloweenCardESP"
-    folder.Parent = obj
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "Chams"
-    highlight.Adornee = obj
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-    highlight.Parent = folder
-
-    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
-    if part then
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "Nametag"
-        billboard.Adornee = part
-        billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Enabled = not halloweenCardsDisableNametags
-        billboard.Parent = folder
-
-        table.insert(activeHalloweenCardsNametags, billboard)
-
-        local textLabel = Instance.new("TextLabel", billboard)
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.Text = "Halloween Card"
-        textLabel.TextSize = 9
-        textLabel.Font = Enum.Font.FredokaOne
-        textLabel.TextStrokeTransparency = 0
-        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-
-        task.spawn(function()
-            local orange = Color3.fromRGB(255, 128, 0)
-            local purple = Color3.fromRGB(148, 0, 211)
-            while halloweenCardsEspEnabled and obj and obj.Parent and highlight and textLabel do
-                local alpha = math.abs(((tick() / 2) % 2) - 1)
-                local lerpedColor = orange:Lerp(purple, alpha)
-                highlight.FillColor = lerpedColor
-                textLabel.TextColor3 = lerpedColor
-                task.wait(0.1)
-            end
-        end)
-    end
-end
-
-EspTab:CreateToggle({
-    Name = "Esp Halloween Cards",
-    CurrentValue = false,
-    Flag = "HalloweenCardsEspToggle",
-    Callback = function(v)
-        halloweenCardsEspEnabled = v
-        if halloweenCardsEspEnabled then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                applyHalloweenCardsESP(obj)
-            end
-            if halloweenCardsConnection then halloweenCardsConnection:Disconnect() end
-            halloweenCardsConnection = workspace.DescendantAdded:Connect(function(obj)
-                if halloweenCardsEspEnabled then
-                    task.wait(0.1)
-                    applyHalloweenCardsESP(obj)
-                end
-            end)
-        else
-            if halloweenCardsConnection then
-                halloweenCardsConnection:Disconnect()
-                halloweenCardsConnection = nil
-            end
-            activeHalloweenCardsNametags = {}
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                local espFolder = obj:FindFirstChild("HalloweenCardESP")
-                if espFolder then espFolder:Destroy() end
-            end
-        end
-    end
-})
-
-EspTab:CreateToggle({
-    Name = "Disable Halloween Cards Nametags",
-    CurrentValue = false,
-    Flag = "DisableHalloweenCardsNametagsToggle",
-    Callback = function(v)
-        halloweenCardsDisableNametags = v
-        for _, tag in ipairs(activeHalloweenCardsNametags) do
-            if tag and tag.Parent then
-                tag.Enabled = not halloweenCardsDisableNametags
-            end
-        end
-    end
-})
-
-local halloweenDoorsEspEnabled = false
-local halloweenDoorsDisableNametags = false
-local activeHalloweenDoorsNametags = {}
-local halloweenDoorsConnection = nil
-
-local function applyHalloweenDoorsESP(obj)
-    if not obj or obj.Name ~= "TrickOrTreatDoor_Origin" or obj:FindFirstChild("HalloweenDoorESP") then return end
-
-    local folder = Instance.new("Folder")
-    folder.Name = "HalloweenDoorESP"
-    folder.Parent = obj
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "Chams"
-    highlight.Adornee = obj
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
-    highlight.Parent = folder
-
-    local part = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)) or (obj:IsA("BasePart") and obj)
-    if part then
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "Nametag"
-        billboard.Adornee = part
-        billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
-        billboard.AlwaysOnTop = true
-        billboard.Enabled = not halloweenDoorsDisableNametags
-        billboard.Parent = folder
-
-        table.insert(activeHalloweenDoorsNametags, billboard)
-
-        local textLabel = Instance.new("TextLabel", billboard)
-        textLabel.Size = UDim2.new(1, 0, 1, 0)
-        textLabel.BackgroundTransparency = 1
-        textLabel.Text = "Halloween Door"
-        textLabel.TextSize = 9
-        textLabel.Font = Enum.Font.FredokaOne
-        textLabel.TextStrokeTransparency = 0
-        textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-
-        task.spawn(function()
-            local orange = Color3.fromRGB(255, 128, 0)
-            local purple = Color3.fromRGB(148, 0, 211)
-            while halloweenDoorsEspEnabled and obj and obj.Parent and highlight and textLabel do
-                local alpha = math.abs(((tick() / 2) % 2) - 1)
-                local lerpedColor = orange:Lerp(purple, alpha)
-                highlight.FillColor = lerpedColor
-                textLabel.TextColor3 = lerpedColor
-                task.wait(0.1)
-            end
-        end)
-    end
-end
-
-EspTab:CreateToggle({
-    Name = "Esp Halloween Doors",
-    CurrentValue = false,
-    Flag = "HalloweenDoorsEspToggle",
-    Callback = function(v)
-        halloweenDoorsEspEnabled = v
-        if halloweenDoorsEspEnabled then
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                applyHalloweenDoorsESP(obj)
-            end
-            if halloweenDoorsConnection then halloweenDoorsConnection:Disconnect() end
-            halloweenDoorsConnection = workspace.DescendantAdded:Connect(function(obj)
-                if halloweenDoorsEspEnabled then
-                    task.wait(0.1)
-                    applyHalloweenDoorsESP(obj)
-                end
-            end)
-        else
-            if halloweenDoorsConnection then
-                halloweenDoorsConnection:Disconnect()
-                halloweenDoorsConnection = nil
-            end
-            activeHalloweenDoorsNametags = {}
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                local espFolder = obj:FindFirstChild("HalloweenDoorESP")
-                if espFolder then espFolder:Destroy() end
-            end
-        end
-    end
-})
-
-EspTab:CreateToggle({
-    Name = "Disable Halloween Doors Nametags",
-    CurrentValue = false,
-    Flag = "DisableHalloweenDoorsNametagsToggle",
-    Callback = function(v)
-        halloweenDoorsDisableNametags = v
-        for _, tag in ipairs(activeHalloweenDoorsNametags) do
-            if tag and tag.Parent then
-                tag.Enabled = not halloweenDoorsDisableNametags
-            end
-        end
-    end
-})
-
 EspTab:CreateSection("Machine ESP")
 
 local generatorEspEnabled = false
@@ -2503,15 +2405,29 @@ EspTab:CreateToggle({
                             local simpleCurAmt = math.floor(tonumber(curAmt) or 0)
                             local simpleReqAmt = math.floor(tonumber(reqAmt) or 0)
 
+                            -- ActivePlayer & ActivePlayer2 verification ADICIONADO
+                            local activePlayerVal = stats and stats:FindFirstChild("ActivePlayer")
+                            local activePlayer2Val = stats and stats:FindFirstChild("ActivePlayer2")
+                            
+                            local isBeingExtracted = (activePlayerVal and activePlayerVal.Value ~= nil and activePlayerVal.Value ~= "" and activePlayerVal.Value ~= "None") or
+                                                     (activePlayer2Val and activePlayer2Val.Value ~= nil and activePlayer2Val.Value ~= "" and activePlayer2Val.Value ~= "None")
+
                             local connieVal = model:FindFirstChild("Connie", true)
                             if connieVal and connieVal.Value == true then
                                 highlight.FillColor = Color3.fromRGB(135, 206, 250)
                                 highlight.OutlineColor = Color3.fromRGB(135, 206, 250)
                                 textLabel.TextColor3 = Color3.fromRGB(135, 206, 250)
                                 textLabel.Text = "Possesed Machine"
+                            elseif isBeingExtracted then
+                                highlight.FillColor = Color3.fromRGB(20, 20, 20)
+                                highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                                highlight.FillTransparency = 0.7
+                                textLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+                                textLabel.Text = "Machine | " .. tostring(simpleCurAmt) .. "/" .. tostring(simpleReqAmt) .. "\nGetting Extracted.."
                             else
                                 highlight.FillColor = Color3.fromRGB(80, 80, 80)
                                 highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                                highlight.FillTransparency = 0.4
                                 textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                                 textLabel.Text = "Machine | " .. tostring(simpleCurAmt) .. "/" .. tostring(simpleReqAmt)
                             end
@@ -3219,13 +3135,137 @@ task.spawn(function()
     end
 end)
 
-PlayerTab:CreateButton({
+-- Infinite Stamina Toggle Integration
+local infStaminaEnabled = false
+local infStaminaConnections = {}
+
+PlayerTab:CreateToggle({
     Name = "Infinite Stamina",
-    Callback = function()
-        pcall(function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/abelsrighthand/AbstractLite/refs/heads/main/abstractlite(infstam).lua"))()
-        end)
-    end,
+    CurrentValue = false,
+    Flag = "InfiniteStaminaToggle",
+    Callback = function(state)
+        infStaminaEnabled = state
+        if infStaminaEnabled then
+            pcall(function()
+                local plrsrv = game:GetService("Players")
+                local replicated = game:GetService("ReplicatedStorage")
+                local userinputservice = game:GetService("UserInputService")
+                local plr = plrsrv.LocalPlayer
+                local localcharacter = plr.Character or plr.CharacterAdded:Wait()
+                local plrgui = plr:WaitForChild("PlayerGui")
+                local screengui = plrgui:FindFirstChild("ScreenGui")
+
+                local sprintevent = replicated.Events:WaitForChild("SprintEvent")
+                local updateEnabled = false
+                local sprinting = localcharacter:WaitForChild("Stats"):WaitForChild("Sprinting")
+                local humanoid = localcharacter:WaitForChild("Humanoid")
+
+                local serversidesprint = nil
+
+                local function applySprintSpeed()
+                    if updateEnabled then
+                        local maxSpeed = plr:GetAttribute("KM_MAX_PLAYER_SPEED")
+                        if maxSpeed then
+                            humanoid.WalkSpeed = maxSpeed
+                        end
+                        sprinting.Value = true
+                    end
+                end
+
+                local conn1 = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+                    if updateEnabled then
+                        local maxSpeed = plr:GetAttribute("KM_MAX_PLAYER_SPEED")
+                        if maxSpeed and humanoid.WalkSpeed < maxSpeed and humanoid.WalkSpeed > 0 then
+                            task.defer(function()
+                                if updateEnabled then
+                                    humanoid.WalkSpeed = maxSpeed
+                                end
+                            end)
+                        end
+                    end
+                end)
+                table.insert(infStaminaConnections, conn1)
+
+                local function enablelooprunspeed()
+                    updateEnabled = true
+                    applySprintSpeed()
+                end
+
+                local function disablelooprunspeed()
+                    updateEnabled = false
+                    humanoid.WalkSpeed = 16 
+                    sprinting.Value = false
+                end
+
+                for i, connection in pairs(getconnections(sprintevent.OnClientEvent)) do
+                    connection:Disable()
+                end
+
+                local conn2 = sprintevent.OnClientEvent:Connect(function(arg1)
+                    serversidesprint = false
+                    enablelooprunspeed()
+                end)
+                table.insert(infStaminaConnections, conn2)
+
+                if screengui and screengui:FindFirstChild("MobileRun") then
+                    for i, connection in pairs(getconnections(screengui.MobileRun.Activated)) do
+                        connection:Disable()
+                    end
+
+                    local conn3 = screengui.MobileRun.Activated:Connect(function()
+                        if screengui.MobileRun.TextLabel.Text == "SPRINT: OFF" then
+                            screengui.MobileRun.TextLabel.Text = "SPRINT: ON"
+                            screengui.MobileRun.Image = "rbxassetid://11866539249"
+                            sprintevent:FireServer(true)
+                            serversidesprint = true
+                            screengui.SprintIcon.Visible = false
+                            enablelooprunspeed()
+                            return
+                        end
+                        disablelooprunspeed()
+                        screengui.MobileRun.TextLabel.Text = "SPRINT: OFF"
+                        screengui.MobileRun.Image = "rbxassetid://11866517702"
+                        screengui.SprintIcon.Visible = false
+                        sprintevent:FireServer(false)
+                        serversidesprint = false
+                    end)
+                    table.insert(infStaminaConnections, conn3)
+                end
+
+                local isprocessed = false
+                local conn4 = userinputservice.InputBegan:Connect(function(inputobj, processevent)
+                    if processevent then return end
+                    if inputobj.KeyCode == Enum.KeyCode.ButtonR1 or inputobj.KeyCode == Enum.KeyCode.LeftShift then
+                        if inputobj.KeyCode == Enum.KeyCode.ButtonR1 and isprocessed then return end
+                        enablelooprunspeed()
+                        serversidesprint = true
+                        if inputobj.KeyCode == Enum.KeyCode.ButtonR1 then isprocessed = true end
+                        if inputobj.KeyCode == Enum.KeyCode.LeftShift then sprintevent:FireServer(true) end
+                    end
+                end)
+                table.insert(infStaminaConnections, conn4)
+
+                local conn5 = userinputservice.InputEnded:Connect(function(inputobj, processevent)
+                    if processevent then return end
+                    if inputobj.KeyCode == Enum.KeyCode.ButtonR1 or inputobj.KeyCode == Enum.KeyCode.LeftShift then
+                        disablelooprunspeed()
+                        sprintevent:FireServer(false)
+                        serversidesprint = false
+                        if inputobj.KeyCode == Enum.KeyCode.ButtonR1 then isprocessed = false end
+                    end
+                end)
+                table.insert(infStaminaConnections, conn5)
+            end)
+        else
+            for _, conn in ipairs(infStaminaConnections) do
+                pcall(function() conn:Disconnect() end)
+            end
+            infStaminaConnections = {}
+            pcall(function()
+                if Humanoid then Humanoid.WalkSpeed = 16 end
+            end)
+        end
+    end
 })
 
 PlayerTab:CreateButton({
@@ -3518,7 +3558,7 @@ FunTab:CreateToggle({
                 if Camera then Camera.FieldOfView = fovValue end
             end)
         else
-            if fovConnection then fovConnection:Disconnect(); fovConnection = nil end
+             if fovConnection then fovConnection:Disconnect(); fovConnection = nil end
             if Camera then Camera.FieldOfView = 70 end
         end
     end
