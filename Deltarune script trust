@@ -859,7 +859,7 @@ function Looey:intro(done)
 		SortOrder = Enum.SortOrder.LayoutOrder, Parent = holder,
 	})
 
-	local lines = {"Welcome To...", "Looey's Circus Gui!", "This script was Discontinued."}
+	local lines = {"Welcome To...", "Looey's Circus Gui!", "THE SCRIPT IS BACK FOLKSSS"}
 
 	task.spawn(function()
 		for i, text in ipairs(lines) do
